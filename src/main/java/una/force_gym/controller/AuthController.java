@@ -42,12 +42,12 @@ public class AuthController {
     
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Valid CredentialsDTO credentialsDTO) {
-        if (!reCaptchaService.verifyRecaptcha(credentialsDTO.getRecaptchaToken())) {
+        /*if (!reCaptchaService.verifyRecaptcha(credentialsDTO.getRecaptchaToken())) {
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", "Recaptcha no válido"
             ));
-        }
+        }*/
 
         LoginDTO loginDTO = userService.login(credentialsDTO);
         loginDTO.setToken(userAuthenticationProvider.createToken(loginDTO.getUsername()));

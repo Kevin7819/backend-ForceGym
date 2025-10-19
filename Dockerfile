@@ -6,5 +6,5 @@ RUN mvn clean package -DskipTests
 FROM openjdk:21-jdk
 WORKDIR /app
 COPY --from=build /app/target/ForceGym-Backend.jar .
-EXPOSE 7000
+EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "ForceGym-Backend.jar"]

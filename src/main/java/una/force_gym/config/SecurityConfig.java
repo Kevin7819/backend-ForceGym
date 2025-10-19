@@ -15,21 +15,23 @@ public class SecurityConfig {
     @Autowired
     private UserAuthenticationProvider userAuthenticationProvider;
 
+    // Creamos el filtro como bean, Spring se encarga de inyectar el UserAuthenticationProvider
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public JwtAuthFilter jwtAuthFilter() {
+        return new JwtAuthFilter(userAuthenticationProvider);
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
-                .addFilterBefore(new JwtAuthFilter(userAuthenticationProvider), BasicAuthenticationFilter.class)
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/recoveryPassword").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/validateResetToken").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/resetPassword").permitAll()
-                        .anyRequest().authenticated()
-                );
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/login", "/recoveryPassword", "/resetPassword", "/validateResetToken").permitAll()
+                    .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthFilter, BasicAuthenticationFilter.class);
 
         return http.build();
     }
-
 }

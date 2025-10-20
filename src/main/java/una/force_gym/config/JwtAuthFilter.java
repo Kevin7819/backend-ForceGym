@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -33,23 +34,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7); 
     
+            logger.info("Header recibido: " + header);
+            logger.info("Token recibido: " + token);
+
             try {
-                SecurityContextHolder.getContext().setAuthentication(
-                        userAuthenticationProvider.validateToken(token));
+                Authentication auth = userAuthenticationProvider.validateToken(token);
+                logger.info("Token válido para usuario: " + auth.getName());
+                SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (TokenExpiredException e) {
-                SecurityContextHolder.clearContext();
-                logger.warn("El token ha expirado: {}", e); 
-                httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                return;
-            } catch (RuntimeException e) {
-                SecurityContextHolder.clearContext();
-                logger.error("Token no válido: {}", e); 
-                httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                return;
+                logger.warn("Token expirado");
+            } catch (Exception e) {
+                logger.error("Error validando token: ", e);
             }
         }
 
         filterChain.doFilter(httpServletRequest, httpServletResponse);
     }
-
 }

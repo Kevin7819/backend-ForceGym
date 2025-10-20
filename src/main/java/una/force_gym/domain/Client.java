@@ -25,7 +25,7 @@ public class Client {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "idClientType", referencedColumnName = "idClientType")
-    private ClientType  typeClient;
+    private ClientType  clientType;
 
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "idHealthQuestionnaire", referencedColumnName = "idHealthQuestionnaire")
@@ -55,12 +55,12 @@ public class Client {
 
     public Client() {}
 
-    public Client(Long idClient, Person person, TypeClient typeClient, HealthQuestionnaire healthQuestionnaire,
+    public Client(Long idClient, Person person, ClientType clientType, HealthQuestionnaire healthQuestionnaire,
             User user, Date registrationDate, Date expirationMembershipDate, String phoneNumberContactEmergency,
             String nameEmergencyContact, String signatureImage, Long isDeleted) {
         this.idClient = idClient;
         this.person = person;
-        this.typeClient = typeClient;
+        this.clientType = clientType;
         this.healthQuestionnaire = healthQuestionnaire;
         this.user = user;
         this.registrationDate = registrationDate;
@@ -87,12 +87,12 @@ public class Client {
         this.person = person;
     }
 
-    public TypeClient getTypeClient() {
-        return typeClient;
+    public ClientType getClientType() {
+        return clientType;
     }
 
-    public void setTypeClient(TypeClient typeClient) {
-        this.typeClient = typeClient;
+    public void setClientType(ClientType clientType) {
+        this.clientType = clientType;
     }
 
     public HealthQuestionnaire getHealthQuestionnaire() {

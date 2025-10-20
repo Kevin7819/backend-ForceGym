@@ -99,7 +99,7 @@ public class ClientController {
                 map.put("label", client.getPerson().getName() + " "
                         + client.getPerson().getFirstLastName() + " "
                         + client.getPerson().getSecondLastName());
-                map.put("idClientType", client.getTypeClient().getIdTypeClient());
+                map.put("idClientType", client.getClientType().getIdClientType());
                 responseData.add(map);
             }
 
@@ -140,7 +140,7 @@ public class ClientController {
                 clientDTO.getPhoneNumber(),
                 clientDTO.getEmail(),
                 clientDTO.getIdGender(),
-                clientDTO.getIdTypeClient(),
+                clientDTO.getIdClientType(),
                 //HealtQuestionnare
                 clientDTO.getDiabetes(),
                 clientDTO.getHypertension(),

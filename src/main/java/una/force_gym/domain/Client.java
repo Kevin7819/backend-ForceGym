@@ -25,7 +25,7 @@ public class Client {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "idClientType", referencedColumnName = "idClientType")
-    private TypeClient typeClient;
+    private ClientType  typeClient;
 
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "idHealthQuestionnaire", referencedColumnName = "idHealthQuestionnaire")

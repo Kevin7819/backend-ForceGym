@@ -38,13 +38,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         userAuthenticationProvider.validateToken(token));
             } catch (TokenExpiredException e) {
                 SecurityContextHolder.clearContext();
-                logger.warn("El token ha expirado: {}", e); 
+                logger.warn("El token ha expirado: {}", e.getMessage());
                 httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                httpServletResponse.setContentType("application/json");
+                httpServletResponse.getWriter().write("{\"error\": \"Token expirado\"}");
                 return;
             } catch (RuntimeException e) {
                 SecurityContextHolder.clearContext();
-                logger.error("Token no válido: {}", e); 
+                logger.error("Token no válido: {}", e.getMessage());
                 httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                httpServletResponse.setContentType("application/json");
+                httpServletResponse.getWriter().write("{\"error\": \"Token inválido\"}");
                 return;
             }
         }

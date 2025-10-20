@@ -140,7 +140,7 @@ public class ClientController {
                 clientDTO.getPhoneNumber(),
                 clientDTO.getEmail(),
                 clientDTO.getIdGender(),
-                clientDTO.getIdClientType(),
+                clientDTO.getIdTypeClient(),
                 //HealtQuestionnare
                 clientDTO.getDiabetes(),
                 clientDTO.getHypertension(),

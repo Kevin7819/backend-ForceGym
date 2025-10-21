@@ -141,8 +141,29 @@ public class EconomicExpenseService {
     }
 
     @Transactional
-    public int addEconomicExpense(Long pIdUser, LocalDate pRegistrationDate, String pVoucherNumber, String pDetail, Long pIdMeanOfPayment, Long pIdCategory, Float pAmount, Long pLoggedIdUser){
-        return economicExpenseRepo.addEconomicExpense(pIdUser, pRegistrationDate, pVoucherNumber, pDetail, pIdMeanOfPayment,pIdCategory, pAmount, pLoggedIdUser);
+    public int addEconomicExpense(Long pIdUser, LocalDate pRegistrationDate, String pVoucherNumber, 
+                                String pDetail, Long pIdMeanOfPayment, Long pIdCategory, 
+                                Float pAmount, Long pLoggedIdUser) {
+        try {
+            System.out.println("=== DEBUG ADD EXPENSE ===");
+            System.out.println("pIdUser: " + pIdUser);
+            System.out.println("pVoucherNumber: " + pVoucherNumber);
+            System.out.println("pAmount: " + pAmount);
+            
+            int result = economicExpenseRepo.addEconomicExpense(pIdUser, pRegistrationDate, pVoucherNumber, 
+                                                            pDetail, pIdMeanOfPayment, pIdCategory, 
+                                                            pAmount, pLoggedIdUser);
+            
+            System.out.println("Result from repository: " + result);
+            return result;
+            
+        } catch (Exception e) {
+            System.out.println("=== ERROR IN ADD EXPENSE ===");
+            System.out.println("Error type: " + e.getClass().getName());
+            System.out.println("Error message: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @Transactional

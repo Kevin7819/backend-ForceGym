@@ -18,7 +18,7 @@ public class SecurityConfig {
     @Bean
     public JwtAuthFilter jwtAuthFilter() {
         return new JwtAuthFilter(userAuthenticationProvider);
-    }//test security
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {

@@ -24,7 +24,8 @@ public class WebConfig implements WebMvcConfigurer {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.setAllowedOrigins(Arrays.asList(
-            "http://localhost:5173"
+            "http://localhost:5173",
+            "https://frontend-forcegym-production.up.railway.app"
         ));
 
         config.setAllowedHeaders(Arrays.asList(

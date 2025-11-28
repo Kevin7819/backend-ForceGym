@@ -2,6 +2,7 @@ package una.force_gym.dto;
 
 import java.time.LocalDate;
 import java.util.Date;
+import jakarta.persistence.Lob;
 
 public class ClientDTO {
     

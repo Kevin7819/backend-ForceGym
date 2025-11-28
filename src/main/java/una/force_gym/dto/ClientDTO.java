@@ -19,8 +19,8 @@ public class ClientDTO {
     private String email;
     private Long idGender;
     
-    //TypeClient
-    private Long idTypeClient;
+    //ClientType
+    private Long idClientType;
 
     //HealtQuestionnaire
     private Long idHealthQuestionnaire;
@@ -46,7 +46,7 @@ public class ClientDTO {
 
     public ClientDTO(Long idClient, Long idPerson, String name, String firstLastName, String secondLastName,
             LocalDate birthday, String identificationNumber, String phoneNumber, String email, Long idGender,
-            Long idTypeClient, Long idHealthQuestionnaire, Boolean diabetes, Boolean hypertension,
+            Long idClientType, Long idHealthQuestionnaire, Boolean diabetes, Boolean hypertension,
             Boolean muscleInjuries, Boolean boneJointIssues, Boolean balanceLoss, Boolean cardiovascularDisease,
             Boolean breathingIssues, Long idUser, Date registrationDate, Date expirationMembershipDate,
             String phoneNumberContactEmergency, String nameEmergencyContact, String signatureImage, Long isDeleted,
@@ -61,7 +61,7 @@ public class ClientDTO {
         this.phoneNumber = phoneNumber;
         this.email = email;
         this.idGender = idGender;
-        this.idTypeClient = idTypeClient;
+        this.idClientType = idClientType;
         this.idHealthQuestionnaire = idHealthQuestionnaire;
         this.diabetes = diabetes;
         this.hypertension = hypertension;
@@ -160,12 +160,12 @@ public class ClientDTO {
         this.idGender = idGender;
     }
 
-    public Long getIdTypeClient() {
-        return idTypeClient;
+    public Long getIdClientType() {
+        return idClientType;
     }
 
-    public void setIdTypeClient(Long idTypeClient) {
-        this.idTypeClient = idTypeClient;
+    public void setIdClientType(Long idClientType) {
+        this.idClientType = idClientType;
     }
 
     public Long getIdHealthQuestionnaire() {

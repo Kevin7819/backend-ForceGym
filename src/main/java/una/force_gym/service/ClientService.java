@@ -45,7 +45,7 @@ public class ClientService {
             //Person
             LocalDate filterByDateBirthStart,
             LocalDate filterByDateBirthEnd,
-            int filterByTypeClient
+            int filterByClientType
     ) {
 
         StoredProcedureQuery query = entityManager.createStoredProcedureQuery("prGetClient", Client.class);
@@ -70,7 +70,7 @@ public class ClientService {
         query.registerStoredProcedureParameter("p_filterByDateBirthStart", LocalDate.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_filterByDateBirthEnd", LocalDate.class, ParameterMode.IN);
 
-        query.registerStoredProcedureParameter("p_filterByTypeClient", Integer.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_filterByClientType", Integer.class, ParameterMode.IN);
 
         // Parámetro de salida
         query.registerStoredProcedureParameter("p_totalRecords", Integer.class, ParameterMode.OUT);
@@ -95,7 +95,7 @@ public class ClientService {
         query.setParameter("p_filterByDateBirthStart", filterByDateBirthStart);
         query.setParameter("p_filterByDateBirthEnd", filterByDateBirthEnd);
 
-        query.setParameter("p_filterByTypeClient", filterByTypeClient);
+        query.setParameter("p_filterByClientType", filterByClientType);
 
         // Ejecutar procedimiento
         query.execute();
@@ -168,7 +168,7 @@ public class ClientService {
             String pPhoneNumber,
             String pEmail,
             Long pIdGender,
-            Long pIdTypeClient,
+            Long pIdClientType,
             Boolean pDiabetes,
             Boolean pHypertension,
             Boolean pMuscleInjuries,
@@ -192,7 +192,7 @@ public class ClientService {
                 pPhoneNumber,
                 pEmail,
                 pIdGender,
-                pIdTypeClient,
+                pIdClientType,
                 pDiabetes,
                 pHypertension,
                 pMuscleInjuries,
@@ -220,7 +220,7 @@ public class ClientService {
             String pPhoneNumber,
             String pEmail,
             Long pIdGender,
-            Long pIdTypeClient,
+            Long pIdClientType,
             Long pIdHealthQuestionnaire,
             Boolean pDiabetes,
             Boolean pHypertension,
@@ -247,7 +247,7 @@ public class ClientService {
                 pPhoneNumber,
                 pEmail,
                 pIdGender,
-                pIdTypeClient,
+                pIdClientType,
                 pIdHealthQuestionnaire,
                 pDiabetes,
                 pHypertension,

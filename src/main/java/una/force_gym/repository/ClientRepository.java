@@ -27,7 +27,7 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
         @Param("pEmail") String pEmail, 
         @Param("pIdGender") Long pIdGender,
 
-        @Param("pIdTypeClient") Long pIdTypeClient, 
+        @Param("pIdClientType") Long pIdClientType, 
 
         //HealthQuestionnaire
         @Param("pDiabetes") Boolean pDiabetes,
@@ -62,7 +62,7 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
         @Param("pEmail") String pEmail, 
         @Param("pIdGender") Long pIdGender, 
 
-        @Param("pIdTypeClient") Long pIdTypeClient, 
+        @Param("pIdClientType") Long pIdClientType, 
 
         //HealthQuestionnaire
         @Param("pIdHealthQuestionnaire") Long pIdHealthQuestionnaire, 

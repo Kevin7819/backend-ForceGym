@@ -52,7 +52,7 @@ public class ClientController {
             @RequestParam(required = false) Boolean filterByBreathingIssues,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate filterByDateBirthStart,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate filterByDateBirthEnd,
-            @RequestParam(defaultValue = "-1") int filterByTypeClient
+            @RequestParam(defaultValue = "-1") int filterByClientType
     ) {
         try {
             System.out.println("page: " + page);
@@ -74,9 +74,9 @@ public class ClientController {
             System.out.println("filterByDateBirthStart: " + (filterByDateBirthStart != null ? filterByDateBirthStart : "null"));
             System.out.println("filterByDateBirthEnd: " + (filterByDateBirthEnd != null ? filterByDateBirthEnd : "null"));
 
-            System.out.println("filterByTypeClient: " + filterByTypeClient);
+            System.out.println("filterByClientType: " + filterByClientType);
 
-            Map<String, Object> responseData = clientService.getClients(page, size, searchType, searchTerm, orderBy, directionOrderBy, filterByStatus, filterByDiabetes, filterByHypertension, filterByMuscleInjuries, filterByBoneJointIssues, filterByBalanceLoss, filterByCardiovascularDisease, filterByBreathingIssues, filterByDateBirthStart, filterByDateBirthEnd, filterByTypeClient);
+            Map<String, Object> responseData = clientService.getClients(page, size, searchType, searchTerm, orderBy, directionOrderBy, filterByStatus, filterByDiabetes, filterByHypertension, filterByMuscleInjuries, filterByBoneJointIssues, filterByBalanceLoss, filterByCardiovascularDisease, filterByBreathingIssues, filterByDateBirthStart, filterByDateBirthEnd, filterByClientType);
             ApiResponse<Map<String, Object>> response = new ApiResponse<>("Clientes obtenidos correctamente.", responseData);
             return new ResponseEntity<>(response, HttpStatus.OK);
 
@@ -140,7 +140,7 @@ public class ClientController {
                 clientDTO.getPhoneNumber(),
                 clientDTO.getEmail(),
                 clientDTO.getIdGender(),
-                clientDTO.getIdTypeClient(),
+                clientDTO.getIdClientType(),
                 //HealtQuestionnare
                 clientDTO.getDiabetes(),
                 clientDTO.getHypertension(),
@@ -190,7 +190,7 @@ public class ClientController {
                 clientDTO.getPhoneNumber(),
                 clientDTO.getEmail(),
                 clientDTO.getIdGender(),
-                clientDTO.getIdTypeClient(),
+                clientDTO.getIdClientType(),
                 //HealtQuestionnare
                 clientDTO.getIdHealthQuestionnaire(),
                 clientDTO.getDiabetes(),

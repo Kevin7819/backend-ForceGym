@@ -47,7 +47,8 @@ public class Client {
     @Column(name = "nameEmergencyContact")
     private String nameEmergencyContact;
 
-    @Column(name = "signatureImage")
+    @Lob
+    @Column(name = "signatureImage", columnDefinition = "LONGTEXT")
     private String signatureImage;
 
     @Column(name = "isDeleted")

@@ -36,6 +36,7 @@ public class ClientDTO {
     private Date expirationMembershipDate;
     private String phoneNumberContactEmergency;
     private String nameEmergencyContact;
+    @Lob
     private String signatureImage;
     private Long isDeleted;
     private Long paramLoggedIdUser;

@@ -44,9 +44,9 @@ public class EconomicIncomeController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate filterByDateRangeMin,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate filterByDateRangeMax,
             @RequestParam(defaultValue = "-1") int filterByMeanOfPayment,
-            @RequestParam(defaultValue = "-1") int filterByTypeClient){ 
+            @RequestParam(defaultValue = "-1") int filterByClientType){ 
         try {
-            Map<String, Object> responseData = economicIncomeService.getEconomicIncomes(page, size, searchType, searchTerm, orderBy, directionOrderBy, filterByStatus, filterByAmountRangeMin, filterByAmountRangeMax, filterByDateRangeMin, filterByDateRangeMax, filterByMeanOfPayment, filterByTypeClient);
+            Map<String, Object> responseData = economicIncomeService.getEconomicIncomes(page, size, searchType, searchTerm, orderBy, directionOrderBy, filterByStatus, filterByAmountRangeMin, filterByAmountRangeMax, filterByDateRangeMin, filterByDateRangeMax, filterByMeanOfPayment, filterByClientType);
             ApiResponse<Map<String, Object>> response = new ApiResponse<>("Ingresos económicos obtenidos correctamente.", responseData);
             return new ResponseEntity<>(response, HttpStatus.OK); 
 

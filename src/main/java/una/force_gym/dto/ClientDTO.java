@@ -2,7 +2,6 @@ package una.force_gym.dto;
 
 import java.time.LocalDate;
 import java.util.Date;
-import jakarta.persistence.Lob;
 
 public class ClientDTO {
     
@@ -37,7 +36,7 @@ public class ClientDTO {
     private Date expirationMembershipDate;
     private String phoneNumberContactEmergency;
     private String nameEmergencyContact;
-    @Lob
+
     private String signatureImage;
     private Long isDeleted;
     private Long paramLoggedIdUser;

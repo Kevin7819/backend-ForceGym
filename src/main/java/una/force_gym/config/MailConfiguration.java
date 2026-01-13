@@ -15,24 +15,26 @@ public class MailConfiguration {
     private String emailSender;
 
     @Value("${email.account.password}")
-    private String emailPassword;
+    private String sendGridApiKey;
 
     @Bean
-    public JavaMailSender getJavaMailSender(){
+    public JavaMailSender getJavaMailSender() {
+
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-        mailSender.setHost("smtp.gmail.com");
+
+        // SendGrid SMTP configuration
+        mailSender.setHost("smtp.sendgrid.net");
         mailSender.setPort(587);
-        
-        mailSender.setUsername(emailSender);
-        mailSender.setPassword(emailPassword);
-        
+
+        mailSender.setUsername("apikey");
+        mailSender.setPassword(sendGridApiKey);
+
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
         props.put("mail.debug", "true");
-        
+
         return mailSender;
     }
-
 }

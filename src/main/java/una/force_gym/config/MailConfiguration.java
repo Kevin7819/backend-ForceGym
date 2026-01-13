@@ -11,29 +11,30 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 @Configuration
 public class MailConfiguration {
 
-    @Value("${email.account.sender}")
+    @Value("${EMAIL_SENDER}")
     private String emailSender;
 
-    @Value("${email.account.password}")
-    private String sendGridApiKey;
+    @Value("${EMAIL_PASSWORD}")
+    private String emailPassword;
 
     @Bean
-    public JavaMailSender getJavaMailSender() {
-
+    public JavaMailSender javaMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
 
-        // SendGrid SMTP configuration
-        mailSender.setHost("smtp.sendgrid.net");
+        mailSender.setHost("smtp.gmail.com");
         mailSender.setPort(587);
 
-        mailSender.setUsername("apikey");
-        mailSender.setPassword(sendGridApiKey);
+        mailSender.setUsername(emailSender);
+        mailSender.setPassword(emailPassword);
 
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.debug", "true");
+        props.put("mail.smtp.connectiontimeout", "5000");
+        props.put("mail.smtp.timeout", "5000");
+        props.put("mail.smtp.writetimeout", "5000");
+        props.put("mail.debug", "false");
 
         return mailSender;
     }

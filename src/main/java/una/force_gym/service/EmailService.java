@@ -3,91 +3,59 @@ package una.force_gym.service;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+
+import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class EmailService implements IEmailService {
 
-    private static final String MAILERSEND_URL =
-            "https://api.mailersend.com/v1/email";
-
-    @Value("${MAILERSEND_API_KEY}")
-    private String apiKey;
-
-    @Value("${MAIL_FROM_EMAIL}")
+    @Value("${EMAIL_SENDER}")
     private String emailSender;
 
-    @Value("${MAIL_FROM_NAME}")
-    private String senderName;
+    private final JavaMailSender mailSender;
 
-    private final RestTemplate restTemplate;
-
-    public EmailService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public EmailService(JavaMailSender mailSender) {
+        this.mailSender = mailSender;
     }
 
     @Override
     public void sendEmail(String[] toUsers, String subject, String message) {
         try {
-            // 1. Load HTML template
-            String htmlTemplate;
-            try (InputStream templateStream =
-                     getClass().getResourceAsStream("/templates/email.html")) {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper =
+                    new MimeMessageHelper(mimeMessage, true, "utf-8");
 
-                if (templateStream == null) {
-                    throw new FileNotFoundException("email.html template not found");
+            // Load HTML template
+            String htmlTemplate;
+            try (InputStream is =
+                    getClass().getResourceAsStream("/templates/email.html")) {
+
+                if (is == null) {
+                    throw new FileNotFoundException("email.html not found");
                 }
 
-                htmlTemplate = new String(
-                        templateStream.readAllBytes(),
-                        StandardCharsets.UTF_8
-                );
+                htmlTemplate = new String(is.readAllBytes(), StandardCharsets.UTF_8);
             }
 
-            // 2. Replace placeholders
+            // Replace placeholders
             String htmlContent = htmlTemplate
                     .replace("${subject}", subject)
                     .replace("${message}", message);
 
-            // 3. Send email to each user
-            for (String to : toUsers) {
+            helper.setFrom(emailSender);
+            helper.setTo(toUsers);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
 
-                Map<String, Object> body = Map.of(
-                    "from", Map.of(
-                        "email", emailSender,
-                        "name", senderName
-                    ),
-                    "to", List.of(
-                        Map.of("email", to)
-                    ),
-                    "subject", subject,
-                    "html", htmlContent
-                );
-
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.APPLICATION_JSON);
-                headers.setBearerAuth(apiKey);
-
-                HttpEntity<Map<String, Object>> request =
-                        new HttpEntity<>(body, headers);
-
-                restTemplate.postForEntity(
-                        MAILERSEND_URL,
-                        request,
-                        Void.class
-                );
-            }
+            mailSender.send(mimeMessage);
 
         } catch (Exception e) {
-            System.err.println("Error sending email with MailerSend: " + e.getMessage());
+            System.err.println("Error sending email with Gmail SMTP: " + e.getMessage());
             e.printStackTrace();
         }
     }

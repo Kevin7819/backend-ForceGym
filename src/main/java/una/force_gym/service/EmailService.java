@@ -13,10 +13,10 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class EmailService implements IEmailService {
 
-    @Value("${resend.api.key}")
+    @Value("${RESEND_API_KEY}")
     private String resendApiKey;
 
-    @Value("${email.account.sender}")
+    @Value("${MAIL_FROM_EMAIL}")
     private String emailSender;
 
     private static final String RESEND_URL = "https://api.resend.com/emails";
@@ -25,7 +25,6 @@ public class EmailService implements IEmailService {
     public void sendEmail(String[] toUsers, String subject, String message) {
 
         try {
-            // Load HTML template
             String htmlTemplate;
             try (InputStream is = getClass().getResourceAsStream("/templates/email.html")) {
                 if (is == null) {
@@ -38,7 +37,6 @@ public class EmailService implements IEmailService {
                     .replace("${subject}", subject)
                     .replace("${message}", message);
 
-            // Build request body
             Map<String, Object> body = new HashMap<>();
             body.put("from", emailSender);
             body.put("to", toUsers);
@@ -53,7 +51,10 @@ public class EmailService implements IEmailService {
                     new HttpEntity<>(body, headers);
 
             RestTemplate restTemplate = new RestTemplate();
-            restTemplate.postForEntity(RESEND_URL, request, String.class);
+            ResponseEntity<String> response =
+                    restTemplate.postForEntity(RESEND_URL, request, String.class);
+
+            System.out.println("Resend response: " + response.getBody());
 
         } catch (Exception e) {
             System.err.println("Error sending email with Resend: " + e.getMessage());

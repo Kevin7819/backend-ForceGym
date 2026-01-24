@@ -23,42 +23,43 @@ public class EmailService implements IEmailService {
 
     @Override
     public void sendEmail(String[] toUsers, String subject, String message) {
-
         try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "utf-8");
+
+            // 1. Cargar la plantilla HTML
             String htmlTemplate;
-            try (InputStream is = getClass().getResourceAsStream("/templates/email.html")) {
-                if (is == null) {
-                    throw new RuntimeException("email.html not found");
+            try (InputStream templateStream = getClass().getResourceAsStream("/templates/email.html")) {
+                if (templateStream == null) {
+                    throw new FileNotFoundException("No se encontró la plantilla email.html");
                 }
-                htmlTemplate = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                htmlTemplate = new String(templateStream.readAllBytes(), StandardCharsets.UTF_8);
             }
 
+            // 2. Reemplazar placeholders
             String htmlContent = htmlTemplate
-                    .replace("${subject}", subject)
-                    .replace("${message}", message);
+                .replace("${subject}", subject)
+                .replace("${message}", message);
 
-            Map<String, Object> body = new HashMap<>();
-            body.put("from", emailSender);
-            body.put("to", toUsers);
-            body.put("subject", subject);
-            body.put("html", htmlContent);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(resendApiKey);
-
-            HttpEntity<Map<String, Object>> request =
-                    new HttpEntity<>(body, headers);
-
-            RestTemplate restTemplate = new RestTemplate();
-            ResponseEntity<String> response =
-                    restTemplate.postForEntity(RESEND_URL, request, String.class);
-
-            System.out.println("Resend response: " + response.getBody());
-
+            // 3. Configurar el email
+            helper.setFrom(emailSender);
+            helper.setTo(toUsers);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true); 
+            
+            // 4. Adjuntar el logo desde
+            ClassPathResource logoResource = new ClassPathResource("/images/Logo.webp");
+            if (!logoResource.exists()) {
+                throw new FileNotFoundException("No se encontró el logo en /images/Logo.webp");
+            }
+            helper.addInline("Logo.webp", logoResource, "image/webp");
+            
+            // 5. Enviar el email
+            mailSender.send(mimeMessage);
         } catch (Exception e) {
-            System.err.println("Error sending email with Resend: " + e.getMessage());
+            System.err.println("Error al enviar el correo: " + e.getMessage());
             e.printStackTrace();
         }
     }
+    
 }

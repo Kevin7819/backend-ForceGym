@@ -93,7 +93,7 @@ public class PasswordResetService {
     }
 
     private String buildResetUrl(String token, HttpServletRequest request) {
-        return "https://frontend-force-gym.vercel.app/reset-password?token=" + token;
+        return "https://frontend-forcegym-production.up.railway.app/reset-password?token=" + token;
     }
 
     public Optional<PasswordResetToken> validatePasswordResetToken(String token, HttpServletRequest request) {

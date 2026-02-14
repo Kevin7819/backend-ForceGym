@@ -5,6 +5,7 @@ public class ExerciseDTO {
     private Long idExercise;
     private String name;
     private String description;
+    private String videoUrl;
     private Long idExerciseDifficulty;
     private Long idExerciseCategory;
     private Long idUser;
@@ -14,7 +15,7 @@ public class ExerciseDTO {
     public ExerciseDTO() {
     }
 
-    public ExerciseDTO(String description, Long idExercise, Long idExerciseCategory, Long idExerciseDifficulty, Long idUser, Long isDeleted, String name, Long paramLoggedIdUser) {
+    public ExerciseDTO(String description, Long idExercise, Long idExerciseCategory, Long idExerciseDifficulty, Long idUser, Long isDeleted, String name, String videoUrl, Long paramLoggedIdUser) {
         this.description = description;
         this.idExercise = idExercise;
         this.idExerciseCategory = idExerciseCategory;
@@ -22,6 +23,7 @@ public class ExerciseDTO {
         this.idUser = idUser;
         this.isDeleted = isDeleted;
         this.name = name;
+        this.videoUrl = videoUrl;
         this.paramLoggedIdUser = paramLoggedIdUser;
     }
 
@@ -87,6 +89,14 @@ public class ExerciseDTO {
 
     public void setParamLoggedIdUser(Long paramLoggedIdUser) {
         this.paramLoggedIdUser = paramLoggedIdUser;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 
 }

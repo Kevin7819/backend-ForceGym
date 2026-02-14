@@ -52,6 +52,9 @@ public class Client {
     @Column(name = "signatureImage", columnDefinition = "LONGTEXT")
     private String signatureImage;
 
+    @Column(name = "password")
+    private String password;
+
     @Column(name = "isDeleted")
     private Long isDeleted;
 
@@ -151,6 +154,14 @@ public class Client {
 
     public void setSignatureImage(String signatureImage) {
         this.signatureImage = signatureImage;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public Long getIsDeleted() {

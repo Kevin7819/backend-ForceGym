@@ -1,0 +1,420 @@
+package una.force_gym.controller;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import una.force_gym.config.UserAuthenticationProvider;
+import una.force_gym.domain.Client;
+import una.force_gym.domain.Measurement;
+import una.force_gym.domain.RoutineAssignment;
+import una.force_gym.dto.ClientCredentialsDTO;
+import una.force_gym.dto.ClientLoginDTO;
+import una.force_gym.dto.ChangeClientPasswordDTO;
+import una.force_gym.dto.ForgotPasswordRequestDTO;
+import una.force_gym.dto.ResetPasswordDTO;
+import una.force_gym.repository.ClientRepository;
+import una.force_gym.service.ClientAuthService;
+import una.force_gym.service.PdfGeneratorService;
+import una.force_gym.service.ClientPasswordResetService;
+import una.force_gym.domain.ClientPasswordResetToken;
+import una.force_gym.util.ApiResponse;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/client-portal")
+public class ClientPortalController {
+
+    @Autowired
+    private ClientAuthService clientAuthService;
+
+    @Autowired
+    private PdfGeneratorService pdfGeneratorService;
+
+    @Autowired
+    private ClientRepository clientRepository;
+
+    @Autowired
+    private UserAuthenticationProvider userAuthenticationProvider;
+
+    @Autowired
+    private ClientPasswordResetService clientPasswordResetService;
+
+    /**
+     * Endpoint para login de clientes usando número de cédula y contraseña
+     */
+    @PostMapping("/login")
+    public ResponseEntity<?> loginClient(@RequestBody @Valid ClientCredentialsDTO credentials) {
+        try {
+            ClientLoginDTO loginDTO = clientAuthService.login(credentials);
+            
+            // Generar token usando el número de cédula como identificador
+            String token = userAuthenticationProvider.createToken(credentials.getIdentificationNumber());
+            loginDTO.setToken(token);
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("loggedClient", loginDTO);
+            responseData.put("message", "Login exitoso");
+
+            ApiResponse<Map<String, Object>> apiResponse = new ApiResponse<>();
+            apiResponse.setData(responseData);
+            apiResponse.setMessage("Login exitoso");
+
+            return ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage(e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para recuperación de contraseña de clientes
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(
+            @RequestBody ForgotPasswordRequestDTO request, 
+            HttpServletRequest httpRequest) {
+        try {
+            // Buscar cliente por email
+            List<Client> allClients = clientRepository.findAll();
+            Client client = allClients.stream()
+                    .filter(c -> c.getPerson() != null && 
+                               c.getPerson().getEmail() != null &&
+                               c.getPerson().getEmail().equalsIgnoreCase(request.getEmail()) &&
+                               Long.valueOf(0L).equals(c.getIsDeleted()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (client == null) {
+                ApiResponse<String> responseNotFound = new ApiResponse<>("El correo electrónico no está registrado", null);
+                return new ResponseEntity<>(responseNotFound, HttpStatus.BAD_REQUEST);
+            }
+
+            // Generar token y enviar email
+            clientPasswordResetService.generateAndSendResetToken(client, httpRequest);
+
+            ApiResponse<String> response = new ApiResponse<>("Se ha enviado un enlace de recuperación a tu correo electrónico", null);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>("Error al procesar la solicitud: " + e.getMessage(), null);
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Endpoint para restablecer la contraseña del cliente mediante token
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<String>> resetPassword(
+            @RequestBody ResetPasswordDTO request,
+            HttpServletRequest httpRequest) {
+        try {
+            System.out.println("📝 Solicitud de cambio de contraseña de cliente recibida");
+            
+            // 1. Validar token con todas las comprobaciones
+            Optional<ClientPasswordResetToken> resetToken = clientPasswordResetService.validatePasswordResetToken(
+                request.getToken(), 
+                httpRequest
+            );
+            
+            if (!resetToken.isPresent()) {
+                System.err.println("❌ Token de cliente inválido o expirado");
+                ApiResponse<String> response = new ApiResponse<>("El enlace de recuperación no es válido o ha expirado. Por favor, solicita un nuevo enlace.", null);
+                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+            }
+            
+            // 2. Cambiar contraseña
+            clientPasswordResetService.resetPassword(resetToken, request.getNewPassword());
+            System.out.println("✅ Contraseña de cliente cambiada exitosamente");
+            
+            ApiResponse<String> response = new ApiResponse<>("Contraseña restablecida exitosamente", null);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            System.err.println("❌ Error al restablecer contraseña: " + e.getMessage());
+            e.printStackTrace();
+            ApiResponse<String> errorResponse = new ApiResponse<>("Error al restablecer la contraseña: " + e.getMessage(), null);
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Endpoint para obtener las rutinas del cliente autenticado
+     */
+    @GetMapping("/my-routines")
+    public ResponseEntity<?> getMyRoutines(@RequestHeader("Authorization") String authHeader) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            System.out.println("=== DEBUG: Getting routines for clientId: " + clientId);
+            
+            List<RoutineAssignment> routines = clientAuthService.getClientRoutines(clientId);
+            System.out.println("=== DEBUG: Found " + routines.size() + " routines");
+            
+            // Log each routine
+            for (RoutineAssignment ra : routines) {
+                System.out.println("=== DEBUG: Routine Assignment ID: " + ra.getIdRoutineAssignment());
+                System.out.println("=== DEBUG: Routine: " + (ra.getRoutine() != null ? ra.getRoutine().getName() : "null"));
+                System.out.println("=== DEBUG: Assignment Date: " + ra.getAssignmentDate());
+            }
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("routines", routines);
+            responseData.put("totalRecords", routines.size());
+
+            ApiResponse<Map<String, Object>> apiResponse = new ApiResponse<>();
+            apiResponse.setData(responseData);
+            apiResponse.setMessage("Rutinas obtenidas exitosamente");
+
+            System.out.println("=== DEBUG: Response data prepared, routines count in map: " + 
+                             ((List<?>) responseData.get("routines")).size());
+
+            return ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            System.err.println("=== ERROR getting routines: " + e.getMessage());
+            e.printStackTrace();
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al obtener rutinas: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para obtener las medidas del cliente autenticado
+     */
+    @GetMapping("/my-measurements")
+    public ResponseEntity<?> getMyMeasurements(@RequestHeader("Authorization") String authHeader) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            
+            List<Measurement> measurements = clientAuthService.getClientMeasurements(clientId);
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("measurements", measurements);
+            responseData.put("totalRecords", measurements.size());
+
+            ApiResponse<Map<String, Object>> apiResponse = new ApiResponse<>();
+            apiResponse.setData(responseData);
+            apiResponse.setMessage("Medidas obtenidas exitosamente");
+
+            return ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al obtener medidas: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para descargar PDF de rutinas
+     */
+    @GetMapping("/download-routines-pdf")
+    public ResponseEntity<?> downloadRoutinesPdf(@RequestHeader("Authorization") String authHeader) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            
+            Client client = clientRepository.findById(clientId)
+                    .orElseThrow(() -> new Exception("Cliente no encontrado"));
+            
+            List<RoutineAssignment> routines = clientAuthService.getClientRoutines(clientId);
+            
+            byte[] pdfBytes = pdfGeneratorService.generateRoutinesPdf(client, routines);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "mis_rutinas.pdf");
+
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al generar PDF: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para descargar PDF de una rutina específica
+     */
+    @GetMapping("/download-routine-pdf/{idRoutineAssignment}")
+    public ResponseEntity<?> downloadSingleRoutinePdf(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long idRoutineAssignment) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            
+            Client client = clientRepository.findById(clientId)
+                    .orElseThrow(() -> new Exception("Cliente no encontrado"));
+            
+            // Obtener todas las rutinas del cliente y filtrar la específica
+            List<RoutineAssignment> allRoutines = clientAuthService.getClientRoutines(clientId);
+            RoutineAssignment specificRoutine = allRoutines.stream()
+                    .filter(r -> r.getIdRoutineAssignment().equals(idRoutineAssignment))
+                    .findFirst()
+                    .orElseThrow(() -> new Exception("Rutina no encontrada o no pertenece al cliente"));
+            
+            // Generar PDF solo con esta rutina
+            List<RoutineAssignment> singleRoutineList = java.util.Collections.singletonList(specificRoutine);
+            byte[] pdfBytes = pdfGeneratorService.generateRoutinesPdf(client, singleRoutineList);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            String filename = "rutina_" + specificRoutine.getRoutine().getName().replaceAll("\\s+", "_") + ".pdf";
+            headers.setContentDispositionFormData("attachment", filename);
+
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al generar PDF: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para descargar PDF de medidas
+     */
+    @GetMapping("/download-measurements-pdf")
+    public ResponseEntity<?> downloadMeasurementsPdf(@RequestHeader("Authorization") String authHeader) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            
+            Client client = clientRepository.findById(clientId)
+                    .orElseThrow(() -> new Exception("Cliente no encontrado"));
+            
+            List<Measurement> measurements = clientAuthService.getClientMeasurements(clientId);
+            
+            byte[] pdfBytes = pdfGeneratorService.generateMeasurementsPdf(client, measurements);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "mis_medidas.pdf");
+
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al generar PDF: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para verificar si el cliente usa contraseña provisional
+     */
+    @GetMapping("/has-provisional-password")
+    public ResponseEntity<?> hasProvisionalPassword(@RequestHeader("Authorization") String authHeader) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            boolean isProvisional = clientAuthService.hasProvisionalPassword(clientId);
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("hasProvisionalPassword", isProvisional);
+
+            ApiResponse<Map<String, Object>> apiResponse = new ApiResponse<>();
+            apiResponse.setData(responseData);
+            apiResponse.setMessage("Estado de contraseña obtenido");
+
+            return ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al verificar contraseña: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para cambiar la contraseña del cliente
+     */
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody @Valid ChangeClientPasswordDTO changePasswordDTO) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            
+            // Validar que las nuevas contraseñas coincidan
+            if (!changePasswordDTO.getNewPassword().equals(changePasswordDTO.getConfirmPassword())) {
+                ApiResponse<String> errorResponse = new ApiResponse<>();
+                errorResponse.setMessage("Las contraseñas no coinciden");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            }
+
+            // Validar longitud mínima
+            if (changePasswordDTO.getNewPassword().length() < 6) {
+                ApiResponse<String> errorResponse = new ApiResponse<>();
+                errorResponse.setMessage("La contraseña debe tener al menos 6 caracteres");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            }
+
+            // Verificar contraseña actual antes de cambiar
+            Client client = clientRepository.findById(clientId)
+                    .orElseThrow(() -> new Exception("Cliente no encontrado"));
+            
+            ClientCredentialsDTO credentials = new ClientCredentialsDTO(
+                client.getPerson().getIdentificationNumber(),
+                changePasswordDTO.getCurrentPassword()
+            );
+            
+            // Esto lanzará excepción si la contraseña actual es incorrecta
+            clientAuthService.login(credentials);
+
+            // Cambiar la contraseña
+            clientAuthService.changePassword(clientId, changePasswordDTO.getNewPassword());
+
+            ApiResponse<String> apiResponse = new ApiResponse<>();
+            apiResponse.setMessage("Contraseña cambiada exitosamente");
+
+            return ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al cambiar contraseña: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
+    /**
+     * Extrae el ID del cliente del token de autorización
+     */
+    private Long extractClientIdFromToken(String authHeader) throws Exception {
+        // Extraer el número de cédula del token
+        String token = authHeader.replace("Bearer ", "");
+        String identificationNumber = userAuthenticationProvider.getUsernameFromToken(token);
+        System.out.println("=== DEBUG: Extracted identification number from token: " + identificationNumber);
+        
+        // Buscar el cliente por número de cédula
+        List<Client> allClients = clientRepository.findAll();
+        System.out.println("=== DEBUG: Total clients in DB: " + allClients.size());
+        
+        Client client = allClients.stream()
+                .filter(c -> {
+                    boolean hasPersonAndId = c.getPerson() != null && c.getPerson().getIdentificationNumber() != null;
+                    boolean matchesId = hasPersonAndId && c.getPerson().getIdentificationNumber().equals(identificationNumber);
+                    boolean notDeleted = Long.valueOf(0L).equals(c.getIsDeleted());
+                    
+                    if (matchesId) {
+                        System.out.println("=== DEBUG: Found matching client: ID=" + c.getIdClient() + 
+                                         ", Name=" + c.getPerson().getName() + 
+                                         ", Deleted=" + c.getIsDeleted());
+                    }
+                    
+                    return hasPersonAndId && matchesId && notDeleted;
+                })
+                .findFirst()
+                .orElseThrow(() -> new Exception("Cliente no encontrado"));
+        
+        System.out.println("=== DEBUG: Returning clientId: " + client.getIdClient());
+        return client.getIdClient();
+    }
+}

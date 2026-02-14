@@ -4,6 +4,9 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -33,11 +36,13 @@ public class Routine {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "idUser", referencedColumnName = "idUser")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User user;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "idDifficultyRoutine", referencedColumnName = "idDifficultyRoutine")
     private DifficultyRoutine difficultyRoutine;
+    
     @Column(name = "createdByUser", nullable = false)
     private Long createdByUser;
 
@@ -45,9 +50,12 @@ public class Routine {
     private Timestamp createdAt = new Timestamp(System.currentTimeMillis());
 
     @OneToMany(mappedBy = "routine", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"routine", "client"})
     private List<RoutineAssignment> assignments;
 
-    @OneToMany(mappedBy = "routine", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "routine", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JsonIgnoreProperties({"routine"})
+    @JsonProperty("routineExercises")
     private List<RoutineExercise> exercises;
 
     @Column(name = "updatedByUser")

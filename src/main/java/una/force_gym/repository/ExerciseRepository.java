@@ -17,6 +17,7 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
     int addExercise(
             @Param("pName") String name,
             @Param("pDescription") String description,
+            @Param("pVideoUrl") String videoUrl,
             @Param("pIdExerciseDifficulty") Long idExerciseDifficulty,
             @Param("pIdExerciseCategory") Long idExerciseCategory,
             @Param("pLoggedIdUser") Long loggedIdUser
@@ -27,6 +28,7 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
             @Param("pIdExercise") int idExercise,
             @Param("pName") String name,
             @Param("pDescription") String description,
+            @Param("pVideoUrl") String videoUrl,
             @Param("pIdExerciseDifficulty") Long idExerciseDifficulty,
             @Param("pIdExerciseCategory") Long idExerciseCategory,
             @Param("pIsDeleted") Long isDeleted,

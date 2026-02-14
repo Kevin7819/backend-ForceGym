@@ -87,8 +87,8 @@ public class ExerciseService {
     }
 
     @Transactional
-    public int addExercise(String name, String description, Long idExerciseDifficulty, Long idExerciseCategory, Long createdByUser) {
-        return exerciseRepo.addExercise(name, description, idExerciseDifficulty, idExerciseCategory, createdByUser);
+    public int addExercise(String name, String description, String videoUrl, Long idExerciseDifficulty, Long idExerciseCategory, Long createdByUser) {
+        return exerciseRepo.addExercise(name, description, videoUrl, idExerciseDifficulty, idExerciseCategory, createdByUser);
     }
 
     @Transactional
@@ -96,12 +96,13 @@ public class ExerciseService {
             int idExercise,
             String name,
             String description,
+            String videoUrl,
             Long idExerciseDifficulty,
             Long idExerciseCategory,
             Long isDeleted,
             Long loggedIdUser
     ) {
-        return exerciseRepo.updateExercise(idExercise, name, description, idExerciseDifficulty, idExerciseCategory, isDeleted, loggedIdUser);
+        return exerciseRepo.updateExercise(idExercise, name, description, videoUrl, idExerciseDifficulty, idExerciseCategory, isDeleted, loggedIdUser);
     }
 
     @Transactional

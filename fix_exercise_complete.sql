@@ -36,12 +36,16 @@ BEGIN
     INNER JOIN tbUser u ON e.idUser = u.idUser
     INNER JOIN tbExerciseCategory ec ON e.idExerciseCategory = ec.idExerciseCategory
     INNER JOIN tbExerciseDifficulty ed ON e.idExerciseDifficulty = ed.idExerciseDifficulty
-    WHERE (p_searchType = 1 OR 
+    WHERE (
+        CASE p_filterByStatus
+            WHEN '' THEN e.isDeleted = 0
+            WHEN 'Inactivos' THEN e.isDeleted = 1
+            WHEN 'Todos' THEN 1=1
+        END
+    )
+    AND (p_searchType = 1 OR 
            (p_searchType = 2 AND e.name LIKE CONCAT('%', p_searchTerm, '%')) OR
            (p_searchType = 3 AND e.description LIKE CONCAT('%', p_searchTerm, '%')))
-    AND (p_filterByStatus = '' OR p_filterByStatus = 'all' OR 
-         (p_filterByStatus = 'active' AND e.isDeleted = 0) OR
-         (p_filterByStatus = 'deleted' AND e.isDeleted = 1))
     AND (p_filterByDifficulty = '' OR p_filterByDifficulty = 'all' OR ed.difficulty = p_filterByDifficulty)
     AND (p_filterByCategory IS NULL OR p_filterByCategory = 0 OR e.idExerciseCategory = p_filterByCategory);
 
@@ -58,12 +62,16 @@ BEGIN
     INNER JOIN tbUser u ON e.idUser = u.idUser
     INNER JOIN tbExerciseCategory ec ON e.idExerciseCategory = ec.idExerciseCategory
     INNER JOIN tbExerciseDifficulty ed ON e.idExerciseDifficulty = ed.idExerciseDifficulty
-    WHERE (p_searchType = 1 OR 
+    WHERE (
+        CASE p_filterByStatus
+            WHEN '' THEN e.isDeleted = 0
+            WHEN 'Inactivos' THEN e.isDeleted = 1
+            WHEN 'Todos' THEN 1=1
+        END
+    )
+    AND (p_searchType = 1 OR 
            (p_searchType = 2 AND e.name LIKE CONCAT('%', p_searchTerm, '%')) OR
            (p_searchType = 3 AND e.description LIKE CONCAT('%', p_searchTerm, '%')))
-    AND (p_filterByStatus = '' OR p_filterByStatus = 'all' OR 
-         (p_filterByStatus = 'active' AND e.isDeleted = 0) OR
-         (p_filterByStatus = 'deleted' AND e.isDeleted = 1))
     AND (p_filterByDifficulty = '' OR p_filterByDifficulty = 'all' OR ed.difficulty = p_filterByDifficulty)
     AND (p_filterByCategory IS NULL OR p_filterByCategory = 0 OR e.idExerciseCategory = p_filterByCategory)
     ORDER BY

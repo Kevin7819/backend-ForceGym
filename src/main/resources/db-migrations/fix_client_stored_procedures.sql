@@ -70,14 +70,17 @@ BEGIN
     FROM tbClient c
     INNER JOIN tbPerson p ON c.idPerson = p.idPerson
     LEFT JOIN tbHealthQuestionnaire hq ON c.idHealthQuestionnaire = hq.idHealthQuestionnaire
-    WHERE c.isDeleted = 0
+    WHERE (
+        CASE p_filterByStatus
+            WHEN '' THEN c.isDeleted = 0
+            WHEN 'Inactivos' THEN c.isDeleted = 1
+            WHEN 'Todos' THEN 1=1
+        END
+    )
     AND (p_searchType = 0 OR 
          (p_searchType = 1 AND p.name LIKE CONCAT('%', COALESCE(p_searchTerm, ''), '%')) OR
          (p_searchType = 2 AND p.identificationNumber LIKE CONCAT('%', COALESCE(p_searchTerm, ''), '%')))
     AND (p_filterByClientType = -1 OR c.idClientType = p_filterByClientType)
-    AND (COALESCE(p_filterByStatus, '') = '' OR 
-         (p_filterByStatus = 'active' AND c.expirationMembershipDate >= CURDATE()) OR
-         (p_filterByStatus = 'inactive' AND c.expirationMembershipDate < CURDATE()))
     AND (p_filterByDiabetes IS NULL OR hq.diabetes = p_filterByDiabetes)
     AND (p_filterByHypertension IS NULL OR hq.hypertension = p_filterByHypertension)
     AND (p_filterByMuscleInjuries IS NULL OR hq.muscleInjuries = p_filterByMuscleInjuries)
@@ -105,14 +108,17 @@ BEGIN
     FROM tbClient c
     INNER JOIN tbPerson p ON c.idPerson = p.idPerson
     LEFT JOIN tbHealthQuestionnaire hq ON c.idHealthQuestionnaire = hq.idHealthQuestionnaire
-    WHERE c.isDeleted = 0
+    WHERE (
+        CASE p_filterByStatus
+            WHEN '' THEN c.isDeleted = 0
+            WHEN 'Inactivos' THEN c.isDeleted = 1
+            WHEN 'Todos' THEN 1=1
+        END
+    )
     AND (p_searchType = 0 OR 
          (p_searchType = 1 AND p.name LIKE CONCAT('%', COALESCE(p_searchTerm, ''), '%')) OR
          (p_searchType = 2 AND p.identificationNumber LIKE CONCAT('%', COALESCE(p_searchTerm, ''), '%')))
     AND (p_filterByClientType = -1 OR c.idClientType = p_filterByClientType)
-    AND (COALESCE(p_filterByStatus, '') = '' OR 
-         (p_filterByStatus = 'active' AND c.expirationMembershipDate >= CURDATE()) OR
-         (p_filterByStatus = 'inactive' AND c.expirationMembershipDate < CURDATE()))
     AND (p_filterByDiabetes IS NULL OR hq.diabetes = p_filterByDiabetes)
     AND (p_filterByHypertension IS NULL OR hq.hypertension = p_filterByHypertension)
     AND (p_filterByMuscleInjuries IS NULL OR hq.muscleInjuries = p_filterByMuscleInjuries)

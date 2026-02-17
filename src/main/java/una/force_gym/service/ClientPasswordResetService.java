@@ -7,22 +7,22 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.servlet.http.HttpServletRequest;
-import una.force_gym.domain.PasswordResetToken;
-import una.force_gym.domain.User;
-import una.force_gym.repository.PasswordResetTokenRepository;
-import una.force_gym.repository.UserRepository;
+import una.force_gym.domain.ClientPasswordResetToken;
+import una.force_gym.domain.Client;
+import una.force_gym.repository.ClientPasswordResetTokenRepository;
+import una.force_gym.repository.ClientRepository;
 import una.force_gym.util.SecureRandomString;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class PasswordResetService {
+public class ClientPasswordResetService {
     
     @Autowired
-    private PasswordResetTokenRepository tokenRepository;
+    private ClientPasswordResetTokenRepository tokenRepository;
     
     @Autowired
-    private UserRepository userRepository;  
+    private ClientRepository clientRepository;  
     
     @Autowired
     private EmailService emailService;
@@ -33,7 +33,11 @@ public class PasswordResetService {
     @Value("${frontend.url:http://localhost:5173}")
     private String frontendUrl;
 
-    public String generateSecurePasswordResetToken(User user, HttpServletRequest request) {
+    /**
+     * Método único que genera el token y envía el email
+     */
+    @Transactional
+    public void generateAndSendResetToken(Client client, HttpServletRequest request) {
         // 1. Token único 
         String token = UUID.randomUUID().toString();
         
@@ -42,11 +46,11 @@ public class PasswordResetService {
         
         // 3. Hash de verificación
         String salt = SecureRandomString.generate(512);
-        String verificationHash = generateVerificationHash(user, clientFingerprint, salt);
+        String verificationHash = generateVerificationHash(client, clientFingerprint, salt);
         
         // 4. Guardar todos los componentes en la base de datos
-        PasswordResetToken resetToken = new PasswordResetToken(
-            user,
+        ClientPasswordResetToken resetToken = new ClientPasswordResetToken(
+            client,
             token,
             clientFingerprint,
             salt,
@@ -55,68 +59,74 @@ public class PasswordResetService {
         );
         tokenRepository.save(resetToken);
         
-        return token;
+        // 5. Enviar email con el token
+        sendPasswordResetEmail(client, token, request);
     }
 
     private String generateClientFingerprint(HttpServletRequest request) {
+        String userAgent = request.getHeader("User-Agent");
+        String acceptLanguage = request.getHeader("Accept-Language");
+        String remoteAddr = request.getRemoteAddr();
+        
         String components = String.join("|",
-            request.getHeader("User-Agent"),
-            request.getHeader("Accept-Language"),
-            request.getRemoteAddr() 
+            userAgent != null ? userAgent : "unknown",
+            acceptLanguage != null ? acceptLanguage : "unknown",
+            remoteAddr != null ? remoteAddr : "unknown"
         );
         return DigestUtils.sha256Hex(components);
     }
 
-    private String generateVerificationHash(User user, String clientFingerprint, String salt) {
+    private String generateVerificationHash(Client client, String clientFingerprint, String salt) {
         String components = String.join("|",
-            user.getPerson().getEmail(),
-            user.getPassword(),
+            client.getPerson().getEmail(),
+            client.getPassword(),
             clientFingerprint,
             salt
         );
         return DigestUtils.sha512Hex(components);
     }
 
-    public void sendPasswordResetEmail(User user, String token, HttpServletRequest request) {
-        // Email 
+    private void sendPasswordResetEmail(Client client, String token, HttpServletRequest request) {
+        // Email del cliente
         String[] emails = new String[1];
-        emails[0] = user.getPerson().getEmail();
+        emails[0] = client.getPerson().getEmail();
 
         // Crear enlace con token de un solo uso
         String resetUrl = buildResetUrl(token, request);
         
         // Email con advertencia de seguridad
         String content = """
-            <p>Se ha solicitado un restablecimiento de contraseña para tu cuenta.</p>
+            <p>Hola %s,</p>
+            <p>Se ha solicitado un restablecimiento de contraseña para tu cuenta del Portal de Clientes.</p>
             <p><strong>Advertencia de seguridad:</strong> Este enlace expirará en 30 minutos y solo es válido desde tu dispositivo habitual.</p>
             <p>Si no reconoces esta solicitud, por favor ignora este mensaje.</p>
             <div class="button-container"> <p class="button"><a href='%s'>Restablecer contraseña</a></p> </div>
-            """.formatted(resetUrl);
+            """.formatted(client.getPerson().getName(), resetUrl);
         
-        emailService.sendEmail(emails, "Restablecimiento de contraseña", content);
+        emailService.sendEmail(emails, "Restablecimiento de contraseña - Portal de Clientes", content);
     }
 
     private String buildResetUrl(String token, HttpServletRequest request) {
-        return frontendUrl + "/reset-password?token=" + token;
+        return frontendUrl + "/portal-cliente/restablecer-contrasena?token=" + token;
     }
 
-    public Optional<PasswordResetToken> validatePasswordResetToken(String token, HttpServletRequest request) {
+    public Optional<ClientPasswordResetToken> validatePasswordResetToken(String token, HttpServletRequest request) {
         // 1. Buscar token en la base de datos
-        Optional<PasswordResetToken> resetToken = tokenRepository.findByRecoveryToken(token);
+        Optional<ClientPasswordResetToken> resetToken = tokenRepository.findByRecoveryToken(token);
         if (resetToken.isEmpty()) {
-            System.err.println("❌ Token no encontrado en la base de datos");
+            System.err.println("❌ Token de cliente no encontrado en la base de datos");
             return Optional.empty();
         }
 
         // 2. Verificar que el token no haya sido usado
         if (resetToken.get().getIsUsed()) {
-            System.err.println("❌ Token ya fue usado previamente");
+            System.err.println("❌ Token de cliente ya fue usado previamente");
             return Optional.empty();
         }
 
         // 3. Verificar expiración
         if (resetToken.get().isExpired()) {
-            System.err.println("❌ Token expirado (más de 30 minutos)");
+            System.err.println("❌ Token de cliente expirado (más de 30 minutos)");
             tokenRepository.delete(resetToken.get());
             return Optional.empty();
         }
@@ -124,7 +134,7 @@ public class PasswordResetService {
         // 4. Verificar fingerprint del cliente (WARNING: no bloquea, solo advierte)
         String currentFingerprint = generateClientFingerprint(request);
         if (!resetToken.get().getClientFingerprint().equals(currentFingerprint)) {
-            System.out.println("⚠️  ADVERTENCIA: Fingerprint diferente detectado");
+            System.out.println("⚠️  ADVERTENCIA: Fingerprint diferente detectado (cliente)");
             System.out.println("   Esperado: " + resetToken.get().getClientFingerprint());
             System.out.println("   Recibido: " + currentFingerprint);
             System.out.println("   Esto puede ocurrir si el usuario abrió el email desde otro dispositivo");
@@ -133,29 +143,32 @@ public class PasswordResetService {
         }
         
         // 5. Verificar hash de seguridad (WARNING: no bloquea, solo advierte)
-        String currentVerificationHash = generateVerificationHash(resetToken.get().getUser(), currentFingerprint, resetToken.get().getSalt());
+        String currentVerificationHash = generateVerificationHash(
+            resetToken.get().getClient(), 
+            currentFingerprint, 
+            resetToken.get().getSalt()
+        );
         if (!resetToken.get().getVerificationHash().equals(currentVerificationHash)) {
-            System.out.println("⚠️  ADVERTENCIA: Hash de verificación diferente");
+            System.out.println("⚠️  ADVERTENCIA: Hash de verificación diferente (cliente)");
             System.out.println("   Esto es normal si el dispositivo/navegador es diferente");
             System.out.println("   ✅ Permitiendo el cambio de contraseña de todos modos");
             // NO retornamos empty - permitimos continuar
         }
         
-        System.out.println("✅ Token validado correctamente para usuario: " + resetToken.get().getUser().getPerson().getEmail());
+        System.out.println("✅ Token de cliente validado correctamente para: " + resetToken.get().getClient().getPerson().getEmail());
         return resetToken;
     }
     
     @Transactional
-    public void resetPassword(Optional<PasswordResetToken> tokenOpt, String newPassword) {
-        PasswordResetToken token = tokenOpt.get();
+    public void resetPassword(Optional<ClientPasswordResetToken> tokenOpt, String newPassword) {
+        ClientPasswordResetToken token = tokenOpt.get();
         
-        // Cambiar contraseña en el registro de usuario
-        User user = token.getUser();
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user); // Guardar nueva contraseña en base de datos
+        // Cambiar contraseña en el registro de cliente
+        Client client = token.getClient();
+        client.setPassword(passwordEncoder.encode(newPassword));
+        clientRepository.save(client); // Guardar nueva contraseña en base de datos
         
         token.setIsUsed(true); // Cambiar estado de uso del token
         tokenRepository.save(token);
-        
     }
 }

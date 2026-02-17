@@ -6,6 +6,7 @@ public class RoutineExerciseDTO {
     private Integer series;
     private Integer repetitions;
     private Integer categoryOrder;
+    private Integer dayNumber;
     private String note;
 
     public RoutineExerciseDTO() {
@@ -64,6 +65,14 @@ public class RoutineExerciseDTO {
 
     public void setCategoryOrder(Integer categoryOrder) {
         this.categoryOrder = categoryOrder;
+    }
+
+    public Integer getDayNumber() {
+        return dayNumber;
+    }
+
+    public void setDayNumber(Integer dayNumber) {
+        this.dayNumber = dayNumber;
     }
 
 }

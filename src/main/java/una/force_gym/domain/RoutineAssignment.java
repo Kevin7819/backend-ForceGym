@@ -2,6 +2,8 @@ package una.force_gym.domain;
 
 import java.util.Date;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -23,10 +25,12 @@ public class RoutineAssignment {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "idRoutine", referencedColumnName = "idRoutine")
+    @JsonIgnoreProperties({"routineAssignments", "hibernateLazyInitializer", "handler"})
     private Routine routine;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "idClient", referencedColumnName = "idClient")
+    @JsonIgnoreProperties({"routineAssignments", "measurements", "hibernateLazyInitializer", "handler"})
     private Client client;
 
     @Column(name = "assignmentDate")

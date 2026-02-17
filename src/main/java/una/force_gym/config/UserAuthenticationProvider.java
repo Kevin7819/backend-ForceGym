@@ -17,8 +17,12 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 
 import jakarta.annotation.PostConstruct;
+import una.force_gym.domain.Client;
 import una.force_gym.dto.UserDTO;
+import una.force_gym.repository.ClientRepository;
 import una.force_gym.service.UserService;
+
+import java.util.List;
 
 @Component
 public class UserAuthenticationProvider {
@@ -29,6 +33,9 @@ public class UserAuthenticationProvider {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private ClientRepository clientRepository;
+
     @PostConstruct
     protected void init() {
         secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
@@ -36,7 +43,7 @@ public class UserAuthenticationProvider {
 
     public String createToken(String username) {
         Date now = new Date();
-        Date validity = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+        Date validity = new Date(now.getTime() + 12 * 60 * 60 * 1000); // 12 horas
 
         Algorithm algorithm = Algorithm.HMAC256(secretKey);
         return JWT.create()
@@ -53,10 +60,51 @@ public class UserAuthenticationProvider {
                 .build();
 
         DecodedJWT decoded = verifier.verify(token);
+        String subject = decoded.getSubject();
 
-        UserDTO user = userService.findByUsername(decoded.getSubject());
+        // Primero intentar buscar como usuario
+        try {
+            UserDTO user = userService.findByUsername(subject);
+            if (user != null) {
+                return new UsernamePasswordAuthenticationToken(user, null, Collections.emptyList());
+            }
+        } catch (Exception e) {
+            // No es un usuario, intentar buscar como cliente
+        }
 
-        return new UsernamePasswordAuthenticationToken(user, null, Collections.emptyList());
+        // Si no es un usuario, buscar como cliente por número de identificación
+        List<Client> allClients = clientRepository.findAll();
+        Client client = allClients.stream()
+            .filter(c -> c.getPerson() != null && 
+                        c.getPerson().getIdentificationNumber() != null &&
+                        c.getPerson().getIdentificationNumber().equals(subject) &&
+                        Long.valueOf(0L).equals(c.getIsDeleted()))
+            .findFirst()
+            .orElse(null);
+
+        if (client != null) {
+            // Crear un UserDTO "virtual" para el cliente
+            UserDTO clientAsUser = new UserDTO();
+            clientAsUser.setIdUser(client.getIdClient()); // Usar el ID del cliente
+            clientAsUser.setPerson(client.getPerson());
+            clientAsUser.setUsername(client.getPerson().getIdentificationNumber());
+            clientAsUser.setIsDeleted(client.getIsDeleted());
+            // role será null para clientes, lo cual está bien
+            
+            return new UsernamePasswordAuthenticationToken(clientAsUser, null, Collections.emptyList());
+        }
+
+        return null;
+    }
+
+    public String getUsernameFromToken(String token) {
+        Algorithm algorithm = Algorithm.HMAC256(secretKey);
+
+        JWTVerifier verifier = JWT.require(algorithm)
+                .build();
+
+        DecodedJWT decoded = verifier.verify(token);
+        return decoded.getSubject();
     }
 
 }

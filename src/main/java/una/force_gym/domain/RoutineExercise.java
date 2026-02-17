@@ -38,6 +38,9 @@ public class RoutineExercise {
     @Column(name = "categoryOrder")
     private Integer categoryOrder;
 
+    @Column(name = "dayNumber")
+    private Integer dayNumber;
+
     public RoutineExercise() {
     }
 
@@ -114,5 +117,13 @@ public class RoutineExercise {
 
     public void setCategoryOrder(Integer categoryOrder) {
         this.categoryOrder = categoryOrder;
+    }
+
+    public Integer getDayNumber() {
+        return dayNumber;
+    }
+
+    public void setDayNumber(Integer dayNumber) {
+        this.dayNumber = dayNumber;
     }
 }

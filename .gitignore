@@ -6,6 +6,9 @@ target/
 target
 .env
 
+# Configuración local de desarrollo
+src/main/resources/application-local.properties
+
 ### STS ###
 .apt_generated
 .classpath

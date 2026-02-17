@@ -29,6 +29,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             HttpServletRequest httpServletRequest,
             HttpServletResponse httpServletResponse,
             FilterChain filterChain) throws ServletException, IOException {
+        
+        // Permitir acceso sin token a rutas públicas
+        String path = httpServletRequest.getRequestURI();
+        
+        if (path.equals("/login") || 
+            path.equals("/recoveryPassword") || 
+            path.equals("/resetPassword") || 
+            path.equals("/validateResetToken") ||
+            path.equals("/client-portal/login") ||
+            path.equals("/client-portal/forgot-password") ||
+            path.equals("/client-portal/reset-password")) {
+            filterChain.doFilter(httpServletRequest, httpServletResponse);
+            return;
+        }
+        
         String header = httpServletRequest.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (header != null && header.startsWith("Bearer ")) {

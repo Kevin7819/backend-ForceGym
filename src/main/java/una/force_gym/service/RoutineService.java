@@ -218,6 +218,7 @@ public class RoutineService {
                     routineExercise.setRepetitions(exDto.getRepetitions());
                     routineExercise.setNote(exDto.getNote());
                     routineExercise.setCategoryOrder(exDto.getCategoryOrder());
+                    routineExercise.setDayNumber(exDto.getDayNumber() != null ? exDto.getDayNumber() : 1);
                     return routineExercise;
                 })
                 .collect(Collectors.toList());
@@ -281,6 +282,7 @@ public class RoutineService {
                     exDto.setRepetitions(ex.getRepetitions());
                     exDto.setNote(ex.getNote());
                     exDto.setCategoryOrder(ex.getCategoryOrder());
+                    exDto.setDayNumber(ex.getDayNumber() != null ? ex.getDayNumber() : 1);
                     return exDto;
                 })
                 .collect(Collectors.toList());

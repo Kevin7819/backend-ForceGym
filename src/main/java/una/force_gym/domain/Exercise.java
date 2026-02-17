@@ -30,6 +30,9 @@ public class Exercise {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "videoUrl")
+    private String videoUrl;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "idExerciseDifficulty", referencedColumnName = "idExerciseDifficulty")
     private ExerciseDifficulty exerciseDifficulty;
@@ -40,13 +43,14 @@ public class Exercise {
     public Exercise() {
     }
 
-    public Exercise(String description, ExerciseCategory exerciseCategory, ExerciseDifficulty exerciseDifficulty, Long idExercise, Long isDeleted, String name, User user) {
+    public Exercise(String description, ExerciseCategory exerciseCategory, ExerciseDifficulty exerciseDifficulty, Long idExercise, Long isDeleted, String name, String videoUrl, User user) {
         this.description = description;
         this.exerciseCategory = exerciseCategory;
         this.exerciseDifficulty = exerciseDifficulty;
         this.idExercise = idExercise;
         this.isDeleted = isDeleted;
         this.name = name;
+        this.videoUrl = videoUrl;
         this.user = user;
     }
 
@@ -104,6 +108,14 @@ public class Exercise {
 
     public void setIsDeleted(Long isDeleted) {
         this.isDeleted = isDeleted;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 
 }

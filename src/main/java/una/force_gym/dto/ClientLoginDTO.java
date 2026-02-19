@@ -1,5 +1,7 @@
 package una.force_gym.dto;
 
+import java.util.Date;
+
 import una.force_gym.domain.Person;
 
 public class ClientLoginDTO {
@@ -7,6 +9,8 @@ public class ClientLoginDTO {
     private Long idClient;
     private Person person;
     private String token;
+    private Date expirationMembershipDate;
+    private Date registrationDate;
 
     public ClientLoginDTO() {}
 
@@ -14,6 +18,14 @@ public class ClientLoginDTO {
         this.idClient = idClient;
         this.person = person;
         this.token = token;
+    }
+
+    public ClientLoginDTO(Long idClient, Person person, String token, Date expirationMembershipDate, Date registrationDate) {
+        this.idClient = idClient;
+        this.person = person;
+        this.token = token;
+        this.expirationMembershipDate = expirationMembershipDate;
+        this.registrationDate = registrationDate;
     }
 
     public Long getIdClient() {
@@ -38,5 +50,21 @@ public class ClientLoginDTO {
 
     public void setToken(String token) {
         this.token = token;
+    }
+
+    public Date getExpirationMembershipDate() {
+        return expirationMembershipDate;
+    }
+
+    public void setExpirationMembershipDate(Date expirationMembershipDate) {
+        this.expirationMembershipDate = expirationMembershipDate;
+    }
+
+    public Date getRegistrationDate() {
+        return registrationDate;
+    }
+
+    public void setRegistrationDate(Date registrationDate) {
+        this.registrationDate = registrationDate;
     }
 }

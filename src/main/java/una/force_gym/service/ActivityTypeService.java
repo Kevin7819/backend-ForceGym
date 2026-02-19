@@ -33,6 +33,7 @@ public class ActivityTypeService {
     public ActivityType saveWithFees(ActivityTypeWithFeesDTO dto) {
         final ActivityType activityType = new ActivityType();
         activityType.setName(dto.getName());
+        activityType.setDurationDays(dto.getDurationDays() != null ? dto.getDurationDays() : 0);
         activityType.setIsDeleted(0L);
         ActivityType savedActivityType = activityTypeRepository.save(activityType);
         
@@ -62,6 +63,7 @@ public class ActivityTypeService {
         final ActivityType activityType = activityTypeRepository.findById(dto.getIdActivityType())
             .orElseThrow(() -> new RuntimeException("ActivityType no encontrado"));
         activityType.setName(dto.getName());
+        activityType.setDurationDays(dto.getDurationDays() != null ? dto.getDurationDays() : 0);
         ActivityType updatedActivityType = activityTypeRepository.save(activityType);
         
         // Eliminar tarifas existentes
@@ -102,6 +104,7 @@ public class ActivityTypeService {
             ActivityTypeWithFeesDTO dto = new ActivityTypeWithFeesDTO();
             dto.setIdActivityType(activity.getIdActivityType());
             dto.setName(activity.getName());
+            dto.setDurationDays(activity.getDurationDays());
             dto.setIsDeleted(activity.getIsDeleted());
             
             List<Fee> fees = feeRepository.findByActivityType_IdActivityType(activity.getIdActivityType());

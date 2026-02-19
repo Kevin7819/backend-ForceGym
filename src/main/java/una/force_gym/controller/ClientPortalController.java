@@ -21,14 +21,19 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import una.force_gym.config.UserAuthenticationProvider;
 import una.force_gym.domain.Client;
+import una.force_gym.domain.ClientExerciseNote;
 import una.force_gym.domain.Measurement;
 import una.force_gym.domain.RoutineAssignment;
+import una.force_gym.domain.RoutineExercise;
 import una.force_gym.dto.ClientCredentialsDTO;
+import una.force_gym.dto.ClientExerciseNoteDTO;
 import una.force_gym.dto.ClientLoginDTO;
 import una.force_gym.dto.ChangeClientPasswordDTO;
 import una.force_gym.dto.ForgotPasswordRequestDTO;
 import una.force_gym.dto.ResetPasswordDTO;
 import una.force_gym.repository.ClientRepository;
+import una.force_gym.repository.ClientExerciseNoteRepository;
+import una.force_gym.repository.RoutineExerciseRepository;
 import una.force_gym.service.ClientAuthService;
 import una.force_gym.service.PdfGeneratorService;
 import una.force_gym.service.ClientPasswordResetService;
@@ -48,6 +53,12 @@ public class ClientPortalController {
 
     @Autowired
     private ClientRepository clientRepository;
+
+    @Autowired
+    private ClientExerciseNoteRepository clientExerciseNoteRepository;
+
+    @Autowired
+    private RoutineExerciseRepository routineExerciseRepository;
 
     @Autowired
     private UserAuthenticationProvider userAuthenticationProvider;
@@ -381,6 +392,213 @@ public class ClientPortalController {
             ApiResponse<String> errorResponse = new ApiResponse<>();
             errorResponse.setMessage("Error al cambiar contraseña: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para obtener todas las notas personales del cliente para una rutina específica
+     */
+    @GetMapping("/exercise-notes/{idRoutine}")
+    public ResponseEntity<?> getExerciseNotes(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long idRoutine) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            
+            List<ClientExerciseNote> notes = clientExerciseNoteRepository.findByClientIdAndRoutineId(clientId, idRoutine);
+
+            // Convertir a DTOs para respuesta más limpia
+            List<ClientExerciseNoteDTO> noteDTOs = notes.stream()
+                    .map(note -> new ClientExerciseNoteDTO(
+                            note.getIdClientExerciseNote(),
+                            note.getClient().getIdClient(),
+                            note.getRoutineExercise().getIdRoutineExercise(),
+                            note.getPersonalNote()
+                    ))
+                    .collect(java.util.stream.Collectors.toList());
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("notes", noteDTOs);
+            responseData.put("totalRecords", noteDTOs.size());
+
+            ApiResponse<Map<String, Object>> apiResponse = new ApiResponse<>();
+            apiResponse.setData(responseData);
+            apiResponse.setMessage("Notas obtenidas exitosamente");
+
+            return ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al obtener notas: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para obtener todas las notas personales del cliente
+     */
+    @GetMapping("/exercise-notes")
+    public ResponseEntity<?> getAllExerciseNotes(@RequestHeader("Authorization") String authHeader) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            
+            List<ClientExerciseNote> notes = clientExerciseNoteRepository.findByClient_IdClient(clientId);
+
+            // Convertir a DTOs para respuesta más limpia
+            List<ClientExerciseNoteDTO> noteDTOs = notes.stream()
+                    .map(note -> new ClientExerciseNoteDTO(
+                            note.getIdClientExerciseNote(),
+                            note.getClient().getIdClient(),
+                            note.getRoutineExercise().getIdRoutineExercise(),
+                            note.getPersonalNote()
+                    ))
+                    .collect(java.util.stream.Collectors.toList());
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("notes", noteDTOs);
+            responseData.put("totalRecords", noteDTOs.size());
+
+            ApiResponse<Map<String, Object>> apiResponse = new ApiResponse<>();
+            apiResponse.setData(responseData);
+            apiResponse.setMessage("Notas obtenidas exitosamente");
+
+            return ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al obtener notas: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para guardar o actualizar una nota personal de ejercicio
+     */
+    @PostMapping("/exercise-notes")
+    public ResponseEntity<?> saveExerciseNote(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody ClientExerciseNoteDTO noteDTO) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            
+            // Verificar que el ejercicio existe
+            RoutineExercise routineExercise = routineExerciseRepository.findById(noteDTO.getIdRoutineExercise())
+                    .orElseThrow(() -> new Exception("Ejercicio de rutina no encontrado"));
+            
+            // Verificar que el cliente tiene acceso a esta rutina (pertenece a una de sus asignaciones)
+            List<RoutineAssignment> clientRoutines = clientAuthService.getClientRoutines(clientId);
+            boolean hasAccess = clientRoutines.stream()
+                    .anyMatch(ra -> ra.getRoutine().getIdRoutine().equals(routineExercise.getRoutine().getIdRoutine()));
+            
+            if (!hasAccess) {
+                ApiResponse<String> errorResponse = new ApiResponse<>();
+                errorResponse.setMessage("No tienes acceso a este ejercicio");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
+            
+            // Obtener cliente
+            Client client = clientRepository.findById(clientId)
+                    .orElseThrow(() -> new Exception("Cliente no encontrado"));
+            
+            // Buscar si ya existe una nota para este cliente y ejercicio
+            Optional<ClientExerciseNote> existingNote = clientExerciseNoteRepository
+                    .findByClient_IdClientAndRoutineExercise_IdRoutineExercise(clientId, noteDTO.getIdRoutineExercise());
+            
+            ClientExerciseNote note;
+            if (existingNote.isPresent()) {
+                // Actualizar nota existente
+                note = existingNote.get();
+                note.setPersonalNote(noteDTO.getPersonalNote());
+            } else {
+                // Crear nueva nota
+                note = new ClientExerciseNote(client, routineExercise, noteDTO.getPersonalNote());
+            }
+            
+            note = clientExerciseNoteRepository.save(note);
+            
+            ClientExerciseNoteDTO responseDTO = new ClientExerciseNoteDTO(
+                    note.getIdClientExerciseNote(),
+                    note.getClient().getIdClient(),
+                    note.getRoutineExercise().getIdRoutineExercise(),
+                    note.getPersonalNote()
+            );
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("note", responseDTO);
+
+            ApiResponse<Map<String, Object>> apiResponse = new ApiResponse<>();
+            apiResponse.setData(responseData);
+            apiResponse.setMessage("Nota guardada exitosamente");
+
+            return ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al guardar nota: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para eliminar una nota personal de ejercicio
+     */
+    @PostMapping("/exercise-notes/delete/{idRoutineExercise}")
+    public ResponseEntity<?> deleteExerciseNote(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long idRoutineExercise) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            
+            // Buscar la nota
+            Optional<ClientExerciseNote> existingNote = clientExerciseNoteRepository
+                    .findByClient_IdClientAndRoutineExercise_IdRoutineExercise(clientId, idRoutineExercise);
+            
+            if (!existingNote.isPresent()) {
+                ApiResponse<String> errorResponse = new ApiResponse<>();
+                errorResponse.setMessage("Nota no encontrada");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            }
+            
+            clientExerciseNoteRepository.delete(existingNote.get());
+
+            ApiResponse<String> apiResponse = new ApiResponse<>();
+            apiResponse.setMessage("Nota eliminada exitosamente");
+
+            return ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al eliminar nota: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para obtener los datos actualizados del perfil del cliente
+     * Esto incluye la fecha de expiración de membresía actualizada
+     */
+    @GetMapping("/my-profile")
+    public ResponseEntity<?> getMyProfile(@RequestHeader("Authorization") String authHeader) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            
+            Client client = clientRepository.findById(clientId)
+                    .orElseThrow(() -> new Exception("Cliente no encontrado"));
+            
+            ClientLoginDTO profileDTO = new ClientLoginDTO();
+            profileDTO.setIdClient(client.getIdClient());
+            profileDTO.setPerson(client.getPerson());
+            profileDTO.setExpirationMembershipDate(client.getExpirationMembershipDate());
+            profileDTO.setRegistrationDate(client.getRegistrationDate());
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("profile", profileDTO);
+
+            ApiResponse<Map<String, Object>> apiResponse = new ApiResponse<>();
+            apiResponse.setData(responseData);
+            apiResponse.setMessage("Perfil obtenido exitosamente");
+
+            return ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al obtener perfil: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 

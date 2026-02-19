@@ -270,4 +270,16 @@ public class ClientService {
     public int deleteClient(Long pIdClient, Long pLoggedIdUser) {
         return clientRepo.deleteClient(pIdClient, pLoggedIdUser);
     }
+
+    @Transactional(readOnly = true)
+    public List<Client> getClientsByMembershipExpiration(int year, int month) {
+        LocalDate startLocalDate = LocalDate.of(year, month, 1);
+        LocalDate endLocalDate = startLocalDate.withDayOfMonth(startLocalDate.lengthOfMonth());
+        
+        // Convertir LocalDate a Date
+        Date startDate = java.sql.Date.valueOf(startLocalDate);
+        Date endDate = java.sql.Date.valueOf(endLocalDate);
+        
+        return clientRepo.findByExpirationMembershipDateBetweenAndIsDeleted(startDate, endDate, 0L);
+    }
 }

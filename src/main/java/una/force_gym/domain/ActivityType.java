@@ -19,14 +19,18 @@ public class ActivityType {
     @Column(name = "name")
     private String name;
 
+    @Column(name = "durationDays")
+    private Integer durationDays;
+
     @Column(name = "isDeleted")
     private Long isDeleted;
 
     public ActivityType() {}
 
-    public ActivityType(Long idActivityType, String name, Long isDeleted) {
+    public ActivityType(Long idActivityType, String name, Integer durationDays, Long isDeleted) {
         this.idActivityType = idActivityType;
         this.name = name;
+        this.durationDays = durationDays;
         this.isDeleted = isDeleted;
     }
 
@@ -44,6 +48,14 @@ public class ActivityType {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public Integer getDurationDays() {
+        return durationDays;
+    }
+
+    public void setDurationDays(Integer durationDays) {
+        this.durationDays = durationDays;
     }
 
     public Long getIsDeleted() {

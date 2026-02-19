@@ -81,6 +81,11 @@ public class EconomicIncomeController {
     
     @PostMapping("/add")
     public ResponseEntity<ApiResponse<String>> addEconomicIncome(@RequestBody EconomicIncomeDTO economicIncomeDTO) {
+        System.out.println("📥 Recibido POST /economicIncome/add");
+        System.out.println("📦 DTO: idClient=" + economicIncomeDTO.getIdClient() + 
+                          ", idActivityType=" + economicIncomeDTO.getIdActivityType() +
+                          ", amount=" + economicIncomeDTO.getAmount());
+        
         int result = economicIncomeService.addEconomicIncome(
             economicIncomeDTO.getIdClient(), 
             economicIncomeDTO.getRegistrationDate(), 

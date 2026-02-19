@@ -74,6 +74,8 @@ public class ClientAuthService {
             ClientLoginDTO loginDTO = new ClientLoginDTO();
             loginDTO.setIdClient(client.getIdClient());
             loginDTO.setPerson(client.getPerson());
+            loginDTO.setExpirationMembershipDate(client.getExpirationMembershipDate());
+            loginDTO.setRegistrationDate(client.getRegistrationDate());
             return loginDTO;
         }
         

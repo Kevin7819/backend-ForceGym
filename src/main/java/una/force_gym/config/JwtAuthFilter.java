@@ -32,6 +32,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         
         // Permitir acceso sin token a rutas públicas
         String path = httpServletRequest.getRequestURI();
+        String method = httpServletRequest.getMethod();
+        
+        logger.info("🔍 Request: " + method + " " + path);
         
         if (path.equals("/login") || 
             path.equals("/recoveryPassword") || 

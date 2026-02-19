@@ -247,4 +247,48 @@ public class ClientController {
                 throw new AppException("Cliente no eliminado debido a problemas en la consulta.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/membership-expirations")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getMembershipExpirations(
+            @RequestParam int year,
+            @RequestParam int month
+    ) {
+        try {
+            List<Client> clients = clientService.getClientsByMembershipExpiration(year, month);
+            
+            // Agrupar clientes por día de vencimiento
+            Map<Integer, List<Map<String, Object>>> clientsByDay = new HashMap<>();
+            
+            for (Client client : clients) {
+                if (client.getExpirationMembershipDate() != null) {
+                    // Convertir Date a LocalDate para obtener el día
+                    LocalDate expirationDate = new java.sql.Date(client.getExpirationMembershipDate().getTime()).toLocalDate();
+                    int day = expirationDate.getDayOfMonth();
+                    
+                    Map<String, Object> clientInfo = new HashMap<>();
+                    clientInfo.put("idClient", client.getIdClient());
+                    clientInfo.put("name", client.getPerson().getName() + " " + client.getPerson().getFirstLastName());
+                    clientInfo.put("phone", client.getPerson().getPhoneNumber());
+                    clientInfo.put("email", client.getPerson().getEmail());
+                    clientInfo.put("expirationDate", expirationDate.toString());
+                    clientInfo.put("clientType", client.getClientType() != null ? client.getClientType().getName() : "N/A");
+                    
+                    clientsByDay.computeIfAbsent(day, k -> new ArrayList<>()).add(clientInfo);
+                }
+            }
+            
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("clientsByDay", clientsByDay);
+            responseData.put("year", year);
+            responseData.put("month", month);
+            responseData.put("totalClients", clients.size());
+            
+            ApiResponse<Map<String, Object>> response = new ApiResponse<>("Vencimientos de membresía obtenidos correctamente.", responseData);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+            
+        } catch (RuntimeException e) {
+            ApiResponse<Map<String, Object>> response = new ApiResponse<>("Error al obtener vencimientos de membresía: " + e.getMessage(), null);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

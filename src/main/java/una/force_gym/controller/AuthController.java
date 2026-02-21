@@ -9,7 +9,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +17,7 @@ import una.force_gym.config.UserAuthenticationProvider;
 import una.force_gym.domain.PasswordResetToken;
 import una.force_gym.domain.User;
 import una.force_gym.dto.CredentialsDTO;
+import una.force_gym.dto.ForgotPasswordRequestDTO;
 import una.force_gym.dto.LoginDTO;
 import una.force_gym.dto.ResetPasswordDTO;
 import una.force_gym.service.PasswordResetService;
@@ -42,12 +42,12 @@ public class AuthController {
     
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Valid CredentialsDTO credentialsDTO) {
-        /*if (!reCaptchaService.verifyRecaptcha(credentialsDTO.getRecaptchaToken())) {
+        if (!reCaptchaService.verifyRecaptcha(credentialsDTO.getRecaptchaToken())) {
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", "Recaptcha no válido"
             ));
-        }*/
+        }
 
         LoginDTO loginDTO = userService.login(credentialsDTO);
         loginDTO.setToken(userAuthenticationProvider.createToken(loginDTO.getUsername()));
@@ -64,8 +64,13 @@ public class AuthController {
     }
 
     @PostMapping("/recoveryPassword")
-    public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestParam String email, HttpServletRequest httpRequest) {
-        User user = userService.findByEmail(email);
+    public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestBody @Valid ForgotPasswordRequestDTO request, HttpServletRequest httpRequest) {
+        if (!reCaptchaService.verifyRecaptcha(request.getRecaptchaToken())) {
+            ApiResponse<String> responseInvalid = new ApiResponse<>("Recaptcha no válido", null);
+            return new ResponseEntity<>(responseInvalid, HttpStatus.BAD_REQUEST);
+        }
+        
+        User user = userService.findByEmail(request.getEmail());
 
         if(user.getIdUser()==null){
             ApiResponse<String> responseNotFound = new ApiResponse<>("Usuario no encontrado", null);

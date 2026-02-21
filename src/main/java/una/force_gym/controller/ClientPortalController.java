@@ -37,6 +37,7 @@ import una.force_gym.repository.RoutineExerciseRepository;
 import una.force_gym.service.ClientAuthService;
 import una.force_gym.service.PdfGeneratorService;
 import una.force_gym.service.ClientPasswordResetService;
+import una.force_gym.service.ReCaptchaService;
 import una.force_gym.domain.ClientPasswordResetToken;
 import una.force_gym.util.ApiResponse;
 import java.util.Optional;
@@ -66,12 +67,21 @@ public class ClientPortalController {
     @Autowired
     private ClientPasswordResetService clientPasswordResetService;
 
+    @Autowired
+    private ReCaptchaService reCaptchaService;
+
     /**
      * Endpoint para login de clientes usando número de cédula y contraseña
      */
     @PostMapping("/login")
     public ResponseEntity<?> loginClient(@RequestBody @Valid ClientCredentialsDTO credentials) {
         try {
+            if (!reCaptchaService.verifyRecaptcha(credentials.getRecaptchaToken())) {
+                ApiResponse<String> errorResponse = new ApiResponse<>();
+                errorResponse.setMessage("Recaptcha no válido");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            }
+            
             ClientLoginDTO loginDTO = clientAuthService.login(credentials);
             
             // Generar token usando el número de cédula como identificador
@@ -102,6 +112,11 @@ public class ClientPortalController {
             @RequestBody ForgotPasswordRequestDTO request, 
             HttpServletRequest httpRequest) {
         try {
+            if (!reCaptchaService.verifyRecaptcha(request.getRecaptchaToken())) {
+                ApiResponse<String> responseInvalid = new ApiResponse<>("Recaptcha no válido", null);
+                return new ResponseEntity<>(responseInvalid, HttpStatus.BAD_REQUEST);
+            }
+            
             // Buscar cliente por email
             List<Client> allClients = clientRepository.findAll();
             Client client = allClients.stream()

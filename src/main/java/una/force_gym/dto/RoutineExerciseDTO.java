@@ -4,7 +4,7 @@ public class RoutineExerciseDTO {
 
     private Long idExercise;
     private Integer series;
-    private Integer repetitions;
+    private String repetitions;
     private Integer categoryOrder;
     private Integer dayNumber;
     private String note;
@@ -12,14 +12,14 @@ public class RoutineExerciseDTO {
     public RoutineExerciseDTO() {
     }
 
-    public RoutineExerciseDTO(Long idExercise, Integer repetitions, Integer series, String note) {
+    public RoutineExerciseDTO(Long idExercise, String repetitions, Integer series, String note) {
         this.idExercise = idExercise;
         this.repetitions = repetitions;
         this.series = series;
         this.note = note;
     }
 
-    public RoutineExerciseDTO(Integer categoryOrder, Long idExercise, String note, Integer repetitions, Integer series) {
+    public RoutineExerciseDTO(Integer categoryOrder, Long idExercise, String note, String repetitions, Integer series) {
         this.categoryOrder = categoryOrder;
         this.idExercise = idExercise;
         this.note = note;
@@ -43,11 +43,11 @@ public class RoutineExerciseDTO {
         this.series = series;
     }
 
-    public Integer getRepetitions() {
+    public String getRepetitions() {
         return repetitions;
     }
 
-    public void setRepetitions(Integer repetitions) {
+    public void setRepetitions(String repetitions) {
         this.repetitions = repetitions;
     }
 

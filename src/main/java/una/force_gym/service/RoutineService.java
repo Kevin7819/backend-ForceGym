@@ -249,8 +249,20 @@ public class RoutineService {
         if (exDto.getSeries() == null || exDto.getSeries() < 1) {
             throw new RuntimeException("Las series deben ser al menos 1");
         }
-        if (exDto.getRepetitions() == null || exDto.getRepetitions() < 1) {
-            throw new RuntimeException("Las repeticiones deben ser al menos 1");
+        if (exDto.getRepetitions() == null || exDto.getRepetitions().trim().isEmpty()) {
+            throw new RuntimeException("Las repeticiones son requeridas");
+        }
+        // Validar que repetitions sea un número positivo o "*" (al fallo)
+        String reps = exDto.getRepetitions().trim();
+        if (!reps.equals("*")) {
+            try {
+                int repsValue = Integer.parseInt(reps);
+                if (repsValue < 1) {
+                    throw new RuntimeException("Las repeticiones deben ser al menos 1 o '*' para indicar al fallo");
+                }
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("Las repeticiones deben ser un número positivo o '*' para indicar al fallo");
+            }
         }
         if (exDto.getIdExercise() == null) {
             throw new RuntimeException("Debe especificar un ejercicio válido");

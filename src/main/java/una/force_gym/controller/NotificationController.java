@@ -54,7 +54,8 @@ public class NotificationController {
     public ResponseEntity<ApiResponse<String>> addNotification(@RequestBody NotificationDTO notificationDTO) {
         int result = notificationService.addNotification(
                 notificationDTO.getIdClient(),
-                notificationDTO.getIdNotificationType()
+                notificationDTO.getIdNotificationType(),
+                notificationDTO.getParamLoggedIdUser()
         );
 
         switch (result) {

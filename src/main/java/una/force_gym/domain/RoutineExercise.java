@@ -30,7 +30,7 @@ public class RoutineExercise {
     private Integer series;
 
     @Column(name = "repetitions")
-    private Integer repetitions;
+    private String repetitions;
 
     @Column(name = "note")
     private String note;
@@ -44,7 +44,7 @@ public class RoutineExercise {
     public RoutineExercise() {
     }
 
-    public RoutineExercise(Exercise exercise, Long idRoutineExercise, Integer repetitions, Routine routine, Integer series, String note) {
+    public RoutineExercise(Exercise exercise, Long idRoutineExercise, String repetitions, Routine routine, Integer series, String note) {
         this.exercise = exercise;
         this.idRoutineExercise = idRoutineExercise;
         this.repetitions = repetitions;
@@ -53,7 +53,7 @@ public class RoutineExercise {
         this.note = note;
     }
 
-    public RoutineExercise(Integer categoryOrder, Exercise exercise, Long idRoutineExercise, String note, Integer repetitions, Routine routine, Integer series) {
+    public RoutineExercise(Integer categoryOrder, Exercise exercise, Long idRoutineExercise, String note, String repetitions, Routine routine, Integer series) {
         this.categoryOrder = categoryOrder;
         this.exercise = exercise;
         this.idRoutineExercise = idRoutineExercise;
@@ -95,11 +95,11 @@ public class RoutineExercise {
         this.series = series;
     }
 
-    public Integer getRepetitions() {
+    public String getRepetitions() {
         return repetitions;
     }
 
-    public void setRepetitions(Integer repetitions) {
+    public void setRepetitions(String repetitions) {
         this.repetitions = repetitions;
     }
 

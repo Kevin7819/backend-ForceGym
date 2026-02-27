@@ -11,7 +11,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Procedure(procedureName = "prInsertNotification", outputParameterName = "result")
     int addNotification(
         @Param("pIdClient") Long pIdClient,
-        @Param("pIdNotificationType") Long pIdNotificationType
+        @Param("pIdNotificationType") Long pIdNotificationType,
+        @Param("pLoggedIdUser") Long pLoggedIdUser
     );
 
     @Procedure(procedureName = "prUpdateNotification", outputParameterName = "result")

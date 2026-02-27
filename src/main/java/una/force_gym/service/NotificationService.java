@@ -78,8 +78,8 @@ public class NotificationService {
     }
     
     @Transactional
-    public int addNotification( Long pIdClient, Long pIdNotificationType) {
-        return notificationRepo.addNotification(pIdClient, pIdNotificationType);
+    public int addNotification( Long pIdClient, Long pIdNotificationType, Long pLoggedIdUser) {
+        return notificationRepo.addNotification(pIdClient, pIdNotificationType, pLoggedIdUser);
     }
 
     @Transactional

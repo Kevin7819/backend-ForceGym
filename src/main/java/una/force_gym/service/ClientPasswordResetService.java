@@ -107,7 +107,7 @@ public class ClientPasswordResetService {
     }
 
     private String buildResetUrl(String token, HttpServletRequest request) {
-        return frontendUrl + "/portal-cliente/restablecer-contrasena?token=" + token;
+        return frontendUrl + "/cliente/restablecer-contrasena?token=" + token;
     }
 
     public Optional<ClientPasswordResetToken> validatePasswordResetToken(String token, HttpServletRequest request) {

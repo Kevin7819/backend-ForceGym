@@ -25,7 +25,8 @@ public class WebConfig implements WebMvcConfigurer {
         config.setAllowCredentials(true);
         config.setAllowedOrigins(Arrays.asList(
             "http://localhost:5173",
-            "https://frontend-forcegym-production.up.railway.app"
+            "https://forcegym.website",
+            "https://www.forcegym.website"
         ));
 
         config.setAllowedHeaders(Arrays.asList(

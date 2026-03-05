@@ -53,8 +53,8 @@ public class EconomicExpenseService {
         query.registerStoredProcedureParameter("p_filterByStatus", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_filterByAmountRangeMin", Float.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_filterByAmountRangeMax", Float.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_filterByDateRangeStart", LocalDate.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_filterByDateRangeEnd", LocalDate.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_filterByDateRangeStart", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_filterByDateRangeEnd", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_filterByMeanOfPayment", Integer.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_filterByCategory", Integer.class, ParameterMode.IN);
 
@@ -71,8 +71,8 @@ public class EconomicExpenseService {
         query.setParameter("p_filterByStatus", filterByStatus);
         query.setParameter("p_filterByAmountRangeMin", filterByAmountRangeMin);
         query.setParameter("p_filterByAmountRangeMax", filterByAmountRangeMax);
-        query.setParameter("p_filterByDateRangeStart", filterByDateRangeStart);
-        query.setParameter("p_filterByDateRangeEnd", filterByDateRangeEnd);
+        query.setParameter("p_filterByDateRangeStart", filterByDateRangeStart != null ? filterByDateRangeStart.toString() : null);
+        query.setParameter("p_filterByDateRangeEnd", filterByDateRangeEnd != null ? filterByDateRangeEnd.toString() : null);
         query.setParameter("p_filterByMeanOfPayment", filterByMeanOfPayment);
         query.setParameter("p_filterByCategory", filterByCategory);
 
@@ -112,15 +112,15 @@ public class EconomicExpenseService {
         query.registerStoredProcedureParameter("p_filterByStatus", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_filterByAmountRangeMin", Float.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_filterByAmountRangeMax", Float.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_filterByDateRangeStart", LocalDate.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_filterByDateRangeEnd", LocalDate.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_filterByDateRangeStart", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_filterByDateRangeEnd", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_filterByMeanOfPayment", Integer.class, ParameterMode.IN);
         // Setear valores
         query.setParameter("p_filterByStatus", filterByStatus);
         query.setParameter("p_filterByAmountRangeMin", filterByAmountRangeMin);
         query.setParameter("p_filterByAmountRangeMax", filterByAmountRangeMax);
-        query.setParameter("p_filterByDateRangeStart", filterByDateRangeStart);
-        query.setParameter("p_filterByDateRangeEnd", filterByDateRangeEnd);
+        query.setParameter("p_filterByDateRangeStart", filterByDateRangeStart != null ? filterByDateRangeStart.toString() : null);
+        query.setParameter("p_filterByDateRangeEnd", filterByDateRangeEnd != null ? filterByDateRangeEnd.toString() : null);
         query.setParameter("p_filterByMeanOfPayment", filterByMeanOfPayment);
 
         // Ejecutar procedimiento

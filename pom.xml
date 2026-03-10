@@ -92,6 +92,11 @@
 			<version>7.2.5</version>
 			<type>pom</type>
 		</dependency>
+		<!-- Caffeine para rate limiting en memoria -->
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+		</dependency>
 	</dependencies>
 
     <build>

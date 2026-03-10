@@ -37,8 +37,10 @@ import una.force_gym.repository.RoutineExerciseRepository;
 import una.force_gym.service.ClientAuthService;
 import una.force_gym.service.PdfGeneratorService;
 import una.force_gym.service.ClientPasswordResetService;
+import una.force_gym.service.LoginAttemptService;
 import una.force_gym.domain.ClientPasswordResetToken;
 import una.force_gym.util.ApiResponse;
+import una.force_gym.util.IpUtils;
 import java.util.Optional;
 
 @RestController
@@ -66,13 +68,37 @@ public class ClientPortalController {
     @Autowired
     private ClientPasswordResetService clientPasswordResetService;
 
+    @Autowired
+    private LoginAttemptService loginAttemptService;
+
     /**
      * Endpoint para login de clientes usando número de cédula y contraseña
      */
     @PostMapping("/login")
-    public ResponseEntity<?> loginClient(@RequestBody @Valid ClientCredentialsDTO credentials) {
+    public ResponseEntity<?> loginClient(
+            @RequestBody @Valid ClientCredentialsDTO credentials,
+            HttpServletRequest request) {
+        // Obtener IP del cliente
+        String clientIp = IpUtils.getClientIp(request);
+        
         try {
+            // Verificar si la IP está bloqueada
+            if (loginAttemptService.isBlocked(clientIp)) {
+                long remainingTime = loginAttemptService.getRemainingBlockTime(clientIp);
+                ApiResponse<String> errorResponse = new ApiResponse<>();
+                errorResponse.setMessage(
+                    String.format("Demasiados intentos fallidos. Por favor, intente nuevamente en %d minutos.", 
+                    remainingTime)
+                );
+                System.out.println("🚫 Intento de login bloqueado - IP: " + clientIp);
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
+            }
+
             ClientLoginDTO loginDTO = clientAuthService.login(credentials);
+            
+            // Login exitoso: limpiar intentos de esta IP
+            loginAttemptService.loginSucceeded(clientIp);
+            System.out.println("✅ Login exitoso - IP: " + clientIp);
             
             // Generar token usando el número de cédula como identificador
             String token = userAuthenticationProvider.createToken(credentials.getIdentificationNumber());
@@ -88,8 +114,22 @@ public class ClientPortalController {
 
             return ResponseEntity.ok(apiResponse);
         } catch (Exception e) {
+            // Login fallido: registrar intento
+            loginAttemptService.loginFailed(clientIp);
+            
+            int remainingAttempts = loginAttemptService.getRemainingAttempts(clientIp);
+            String errorMessage = e.getMessage();
+            
+            if (remainingAttempts > 0) {
+                errorMessage = String.format("%s. Intentos restantes: %d", errorMessage, remainingAttempts);
+            } else {
+                errorMessage = "Demasiados intentos fallidos. Cuenta bloqueada temporalmente por 5 minutos.";
+            }
+            
+            System.out.println("❌ Login fallido - IP: " + clientIp + " - Intentos restantes: " + remainingAttempts);
+            
             ApiResponse<String> errorResponse = new ApiResponse<>();
-            errorResponse.setMessage(e.getMessage());
+            errorResponse.setMessage(errorMessage);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         }
     }

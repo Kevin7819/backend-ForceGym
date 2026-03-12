@@ -271,6 +271,105 @@ public class ClientService {
         return clientRepo.deleteClient(pIdClient, pLoggedIdUser);
     }
 
+    @Transactional
+    public void deleteClientPermanently(Long pIdClient, Long pLoggedIdUser) {
+        Client client = clientRepo.findById(pIdClient)
+            .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+        
+        // Obtener los IDs antes de eliminar
+        Long idPerson = client.getPerson() != null ? client.getPerson().getIdPerson() : null;
+        Long idHealthQuestionnaire = client.getHealthQuestionnaire() != null ? 
+            client.getHealthQuestionnaire().getIdHealthQuestionnaire() : null;
+        
+        // Verificar si hay ingresos económicos asociados
+        Long incomeCount = (Long) entityManager.createNativeQuery(
+            "SELECT COUNT(*) FROM tbEconomicIncome WHERE idClient = :idClient AND isDeleted = 0")
+            .setParameter("idClient", pIdClient)
+            .getSingleResult();
+        
+        if (incomeCount > 0) {
+            throw new RuntimeException("No se puede eliminar permanentemente este cliente porque tiene " + 
+                incomeCount + " ingreso(s) económico(s) asociado(s). " +
+                "Los registros financieros deben preservarse. " +
+                "Use la opción de 'Eliminar' (marcar como inactivo) en su lugar.");
+        }
+        
+        // Desactivar temporalmente las verificaciones de llaves foráneas
+        entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
+        
+        try {
+            // 1. Eliminar registros relacionados usando SQL nativo
+            // Notas de ejercicios del portal de cliente
+            entityManager.createNativeQuery("DELETE FROM tbClientExerciseNote WHERE idClient = :idClient")
+                .setParameter("idClient", pIdClient)
+                .executeUpdate();
+            
+            // Ejercicios de rutina de las asignaciones del cliente
+            entityManager.createNativeQuery("DELETE FROM tbRoutineExercise WHERE idRoutine IN " +
+                "(SELECT idRoutine FROM tbRoutineAssignment WHERE idClient = :idClient)")
+                .setParameter("idClient", pIdClient)
+                .executeUpdate();
+            
+            // Asignaciones de rutinas
+            entityManager.createNativeQuery("DELETE FROM tbRoutineAssignment WHERE idClient = :idClient")
+                .setParameter("idClient", pIdClient)
+                .executeUpdate();
+            
+            // Mediciones
+            entityManager.createNativeQuery("DELETE FROM tbMeasurement WHERE idClient = :idClient")
+                .setParameter("idClient", pIdClient)
+                .executeUpdate();
+            
+            // Notificaciones
+            entityManager.createNativeQuery("DELETE FROM tbNotification WHERE idClient = :idClient")
+                .setParameter("idClient", pIdClient)
+                .executeUpdate();
+            
+            // Tokens de reseteo de contraseña
+            entityManager.createNativeQuery("DELETE FROM tbClientPasswordRecovery WHERE idClient = :idClient")
+                .setParameter("idClient", pIdClient)
+                .executeUpdate();
+            
+            // 2. Eliminar el cliente
+            entityManager.createNativeQuery("DELETE FROM tbClient WHERE idClient = :idClient")
+                .setParameter("idClient", pIdClient)
+                .executeUpdate();
+            
+            // 3. Eliminar cuestionario de salud si existe
+            if (idHealthQuestionnaire != null) {
+                entityManager.createNativeQuery("DELETE FROM tbHealthQuestionnaire WHERE idHealthQuestionnaire = :id")
+                    .setParameter("id", idHealthQuestionnaire)
+                    .executeUpdate();
+            }
+            
+            // 4. Eliminar persona si existe (verificar que no esté siendo usada por otros registros)
+            if (idPerson != null) {
+                // Verificar si la persona está siendo usada por otro cliente o usuario
+                Long countClient = (Long) entityManager.createNativeQuery(
+                    "SELECT COUNT(*) FROM tbClient WHERE idPerson = :idPerson")
+                    .setParameter("idPerson", idPerson)
+                    .getSingleResult();
+                
+                Long countUser = (Long) entityManager.createNativeQuery(
+                    "SELECT COUNT(*) FROM tbUser WHERE idPerson = :idPerson")
+                    .setParameter("idPerson", idPerson)
+                    .getSingleResult();
+                
+                // Solo eliminar si no está siendo usada
+                if (countClient == 0 && countUser == 0) {
+                    entityManager.createNativeQuery("DELETE FROM tbPerson WHERE idPerson = :idPerson")
+                        .setParameter("idPerson", idPerson)
+                        .executeUpdate();
+                }
+            }
+            
+            entityManager.flush();
+        } finally {
+            // Reactivar las verificaciones de llaves foráneas
+            entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<Client> getClientsByMembershipExpiration(int year, int month) {
         LocalDate startLocalDate = LocalDate.of(year, month, 1);

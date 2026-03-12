@@ -152,6 +152,76 @@ public class UserService {
     }
 
     @Transactional
+    public void deleteUserPermanently(Long pIdUser, Long pLoggedIdUser) {
+        User user = userRepo.findById(pIdUser)
+            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        
+        // Obtener el ID de la persona antes de eliminar
+        Long idPerson = user.getPerson() != null ? user.getPerson().getIdPerson() : null;
+        
+        // Verificar si hay clientes asociados a este usuario (el usuario creó clientes)
+        Long clientCount = (Long) entityManager.createNativeQuery(
+            "SELECT COUNT(*) FROM tbClient WHERE idUser = :idUser")
+            .setParameter("idUser", pIdUser)
+            .getSingleResult();
+        
+        if (clientCount > 0) {
+            throw new RuntimeException("No se puede eliminar el usuario porque tiene clientes asociados. " +
+                "Primero debe reasignar o eliminar los clientes asociados.");
+        }
+        
+        // 1. Eliminar registros relacionados
+        // Gastos económicos
+        entityManager.createNativeQuery("DELETE FROM tbEconomicExpense WHERE idUser = :idUser")
+            .setParameter("idUser", pIdUser)
+            .executeUpdate();
+        
+        // Plantillas de notificaciones
+        entityManager.createNativeQuery("DELETE FROM tbNotificationTemplate WHERE idUser = :idUser")
+            .setParameter("idUser", pIdUser)
+            .executeUpdate();
+        
+        // Verificar si hay rutinas asociadas
+        Long routineCount = (Long) entityManager.createNativeQuery(
+            "SELECT COUNT(*) FROM tbRoutine WHERE idUser = :idUser")
+            .setParameter("idUser", pIdUser)
+            .getSingleResult();
+        
+        if (routineCount > 0) {
+            throw new RuntimeException("No se puede eliminar el usuario porque tiene rutinas creadas. " +
+                "Primero debe reasignar o eliminar las rutinas asociadas.");
+        }
+        
+        // 2. Eliminar el usuario
+        entityManager.createNativeQuery("DELETE FROM tbUser WHERE idUser = :idUser")
+            .setParameter("idUser", pIdUser)
+            .executeUpdate();
+        
+        // 3. Eliminar persona si existe (verificar que no esté siendo usada por otros registros)
+        if (idPerson != null) {
+            // Verificar si la persona está siendo usada por otro cliente o usuario
+            Long countClient = (Long) entityManager.createNativeQuery(
+                "SELECT COUNT(*) FROM tbClient WHERE idPerson = :idPerson")
+                .setParameter("idPerson", idPerson)
+                .getSingleResult();
+            
+            Long countUser = (Long) entityManager.createNativeQuery(
+                "SELECT COUNT(*) FROM tbUser WHERE idPerson = :idPerson")
+                .setParameter("idPerson", idPerson)
+                .getSingleResult();
+            
+            // Solo eliminar si no está siendo usada
+            if (countClient == 0 && countUser == 0) {
+                entityManager.createNativeQuery("DELETE FROM tbPerson WHERE idPerson = :idPerson")
+                    .setParameter("idPerson", idPerson)
+                    .executeUpdate();
+            }
+        }
+        
+        entityManager.flush();
+    }
+
+    @Transactional
     public LoginDTO login(CredentialsDTO credentialsDTO) {
         User user = userRepo.findByUsernameAndIsDeleted(credentialsDTO.getUsername(), Long.valueOf(0))
                 .orElseThrow(() -> new AppException("Usuario inválido", HttpStatus.NOT_FOUND));

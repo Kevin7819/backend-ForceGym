@@ -248,6 +248,19 @@ public class ClientController {
         }
     }
 
+    @DeleteMapping("/delete-permanent/{idClient}")
+    public ResponseEntity<ApiResponse<String>> deleteClientPermanently(@PathVariable("idClient") Long idClient, @RequestBody ParamLoggedIdUserDTO paramLoggedIdUser) {
+        try {
+            clientService.deleteClientPermanently(idClient, paramLoggedIdUser.getParamLoggedIdUser());
+            ApiResponse<String> response = new ApiResponse<>("Cliente eliminado permanentemente.", null);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            // Retornar BAD_REQUEST para errores de validación de negocio (como cliente con ingresos)
+            ApiResponse<String> response = new ApiResponse<>(e.getMessage(), null);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @GetMapping("/membership-expirations")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getMembershipExpirations(
             @RequestParam int year,

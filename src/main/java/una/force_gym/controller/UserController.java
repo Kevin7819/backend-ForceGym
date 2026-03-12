@@ -206,4 +206,17 @@ public class UserController {
 
     }
 
+    @DeleteMapping("/delete-permanent/{idUser}")
+    public ResponseEntity<ApiResponse<String>> deleteUserPermanently(@PathVariable("idUser") Long idUser, @RequestBody ParamLoggedIdUserDTO paramLoggedIdUser) {
+        try {
+            userService.deleteUserPermanently(idUser, paramLoggedIdUser.getParamLoggedIdUser());
+            ApiResponse<String> response = new ApiResponse<>("Usuario eliminado permanentemente.", null);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            // Retornar BAD_REQUEST para errores de validación de negocio
+            ApiResponse<String> response = new ApiResponse<>(e.getMessage(), null);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+    }
+
 }

@@ -30,6 +30,9 @@ public class Measurement {
     @Column(name = "height")
     private Float height;
 
+    @Column(name = "bmi")
+    private Float bmi;
+
     @Column(name = "muscleMass")
     private Float muscleMass;
 
@@ -80,7 +83,7 @@ public class Measurement {
 
     public Measurement() {}
 
-    public Measurement(Long idMeasurement, Client client, Date measurementDate, Float weight, Float height,
+    public Measurement(Long idMeasurement, Client client, Date measurementDate, Float weight, Float height, Float bmi,
                        Float muscleMass, Float bodyFatPercentage, Float visceralFatPercentage,
                        Float chestSize, Float backSize, Float hipSize, Float waistSize, Float leftLegSize, Float rightLegSize,
                        Float leftCalfSize, Float rightCalfSize, Float leftForeArmSize, Float rightForeArmSize,
@@ -90,6 +93,7 @@ public class Measurement {
         this.measurementDate = measurementDate;
         this.weight = weight;
         this.height = height;
+        this.bmi = bmi;
         this.muscleMass = muscleMass;
         this.bodyFatPercentage = bodyFatPercentage;
         this.visceralFatPercentage = visceralFatPercentage;
@@ -146,6 +150,14 @@ public class Measurement {
 
     public void setHeight(Float height) {
         this.height = height;
+    }
+
+    public Float getBmi() {
+        return bmi;
+    }
+
+    public void setBmi(Float bmi) {
+        this.bmi = bmi;
     }
 
     public Float getMuscleMass() {

@@ -9,6 +9,7 @@ public class MeasurementDTO {
     private Date measurementDate;
     private Float weight;
     private Float height;
+    private Float bmi;
     private Float muscleMass;
     private Float bodyFatPercentage;
     private Float visceralFatPercentage;
@@ -29,7 +30,7 @@ public class MeasurementDTO {
 
     public MeasurementDTO() {}
 
-    public MeasurementDTO(Long idMeasurement, Long idClient, Date measurementDate, Float weight, Float height,
+    public MeasurementDTO(Long idMeasurement, Long idClient, Date measurementDate, Float weight, Float height, Float bmi,
             Float muscleMass, Float bodyFatPercentage, Float visceralFatPercentage, Float chestSize, Float backSize, Float hipSize, Float waistSize,
             Float leftLegSize, Float rightLegSize, Float leftCalfSize, Float rightCalfSize,
             Float leftForeArmSize, Float rightForeArmSize, Float leftArmSize, Float rightArmSize,
@@ -39,6 +40,7 @@ public class MeasurementDTO {
         this.measurementDate = measurementDate;
         this.weight = weight;
         this.height = height;
+        this.bmi = bmi;
         this.muscleMass = muscleMass;
         this.bodyFatPercentage = bodyFatPercentage;
         this.visceralFatPercentage = visceralFatPercentage;
@@ -96,6 +98,14 @@ public class MeasurementDTO {
 
     public void setHeight(Float height) {
         this.height = height;
+    }
+
+    public Float getBmi() {
+        return bmi;
+    }
+
+    public void setBmi(Float bmi) {
+        this.bmi = bmi;
     }
 
     public Float getMuscleMass() {

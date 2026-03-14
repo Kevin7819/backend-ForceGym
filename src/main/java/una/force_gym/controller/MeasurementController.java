@@ -47,7 +47,11 @@ public class MeasurementController {
             
             )  {
         try {
-            Map<String, Object> responseData = measurementService.getMeasurements(idClient, page, size, searchType, searchTerm, orderBy, directionOrderBy, filterByStatus, filterByDateRangeMin, filterByDateRangeMax);
+            // Mapear Min/Max a Start/End para el servicio
+            Map<String, Object> responseData = measurementService.getMeasurements(
+                idClient, page, size, searchType, searchTerm, orderBy, directionOrderBy, 
+                filterByStatus, filterByDateRangeMin, filterByDateRangeMax
+            );
             ApiResponse<Map<String, Object>> response = new ApiResponse<>("Medidas obtenidas correctamente.", responseData);
             return new ResponseEntity<>(response, HttpStatus.OK); 
 
@@ -66,6 +70,7 @@ public class MeasurementController {
             measurementDTO.getMeasurementDate(),
             measurementDTO.getWeight(),
             measurementDTO.getHeight(),
+            measurementDTO.getBmi(),
             measurementDTO.getMuscleMass(),
             measurementDTO.getBodyFatPercentage(),
             measurementDTO.getVisceralFatPercentage(),
@@ -107,6 +112,7 @@ public class MeasurementController {
             measurementDTO.getMeasurementDate(),
             measurementDTO.getWeight(),
             measurementDTO.getHeight(),
+            measurementDTO.getBmi(),
             measurementDTO.getMuscleMass(),
             measurementDTO.getBodyFatPercentage(),
             measurementDTO.getVisceralFatPercentage(),

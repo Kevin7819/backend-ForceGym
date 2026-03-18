@@ -1,6 +1,7 @@
 package una.force_gym.controller;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import una.force_gym.dto.MeasurementDTO;
 import una.force_gym.dto.ParamLoggedIdUserDTO;
@@ -147,6 +149,30 @@ public class MeasurementController {
             default -> throw new AppException("Medidas no actualizado debido a problemas en la consulta.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> importMeasurementsFromExcel(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("idClient") Long idClient) {
+        try {
+            int importedCount = measurementService.importMeasurementsFromExcel(file, idClient);
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("imported", importedCount);
+            
+            ApiResponse<Map<String, Object>> response = new ApiResponse<>(
+                "Medidas importadas correctamente desde Excel.", 
+                data
+            );
+            return new ResponseEntity<>(response, HttpStatus.OK);
+            
+        } catch (Exception e) {
+            throw new AppException(
+                "Error al importar medidas desde Excel: " + e.getMessage(), 
+                HttpStatus.BAD_REQUEST
+            );
+        }
     }
 
     @DeleteMapping("/delete/{idMeasurement}")

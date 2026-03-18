@@ -587,9 +587,11 @@ public class MeasurementService {
                     if (parts.length == 2) {
                         String secondPart = parts[1].trim();
                         if (!secondPart.isEmpty()) {
-                            // Tiene dos valores: primero=izq, segundo=der
-                            result[0] = Float.parseFloat(parts[0].trim());
-                            result[1] = Float.parseFloat(secondPart);
+                            // Tiene dos valores: primero=derecho, segundo=izquierdo
+                            float firstValue = Float.parseFloat(parts[0].trim());
+                            float secondValue = Float.parseFloat(secondPart);
+                            result[0] = secondValue;  // izquierdo = segundo valor
+                            result[1] = firstValue;   // derecho = primer valor
                             return result;
                         }
                     }

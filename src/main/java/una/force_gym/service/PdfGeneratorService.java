@@ -2,20 +2,26 @@ package una.force_gym.service;
 
 import java.io.ByteArrayOutputStream;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.AreaBreak;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+import com.itextpdf.layout.properties.VerticalAlignment;
 
 import una.force_gym.domain.Client;
 import una.force_gym.domain.Measurement;
@@ -279,200 +285,316 @@ public class PdfGeneratorService {
     }
 
     /**
-     * Genera un PDF con las medidas de un cliente
+     * Genera un PDF con las medidas de un cliente (formato admin landscape)
      */
     public byte[] generateMeasurementsPdf(Client client, List<Measurement> measurements) throws Exception {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PdfWriter writer = new PdfWriter(baos);
         PdfDocument pdf = new PdfDocument(writer);
+        pdf.setDefaultPageSize(PageSize.A4.rotate());
         Document document = new Document(pdf);
+        
+        // Reducir márgenes para aprovechar espacio
+        document.setMargins(20, 20, 20, 20);
 
-        // Fecha y hora actuales
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
         String currentDate = dateFormat.format(new java.util.Date());
         String currentTime = timeFormat.format(new java.util.Date());
 
-        // Header con información del reporte
-        Paragraph header = new Paragraph("HISTORIAL DE MEDIDAS CORPORALES")
-                .setFontSize(18)
+        DeviceRgb yellowColor = new DeviceRgb(207, 173, 4);
+        DeviceRgb greyLineColor = new DeviceRgb(200, 200, 200);
+
+        String clientName = client.getPerson().getName() + " " + 
+                           client.getPerson().getFirstLastName() + " " + 
+                           client.getPerson().getSecondLastName();
+
+        // HEADER: Título centrado
+        Paragraph header = new Paragraph("Reporte de Medidas")
+                .setFontSize(14)
                 .setBold()
                 .setTextAlignment(TextAlignment.CENTER)
                 .setMarginBottom(5);
         document.add(header);
 
-        // Línea separadora
-        com.itextpdf.layout.element.LineSeparator lineSeparator1 = 
+        // Línea separadora 1
+        com.itextpdf.layout.element.LineSeparator line1 = 
             new com.itextpdf.layout.element.LineSeparator(
                 new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f));
-        lineSeparator1.setMarginTop(5);
-        lineSeparator1.setMarginBottom(10);
-        document.add(lineSeparator1);
+        line1.setStrokeColor(greyLineColor);
+        line1.setMarginTop(2);
+        line1.setMarginBottom(8);
+        document.add(line1);
 
-        // Información del cliente y reporte
-        Paragraph reportInfo = new Paragraph(
-                "Cliente: " + client.getPerson().getName() + " " + 
-                client.getPerson().getFirstLastName() + " " + 
-                client.getPerson().getSecondLastName() + "\n" +
-                "Cédula: " + client.getPerson().getIdentificationNumber() + "\n" +
-                "Fecha del reporte: " + currentDate + "\n" +
-                "Hora del reporte: " + currentTime
-        ).setFontSize(10).setMarginBottom(15);
+        // Información del reporte
+        Paragraph reportInfo = new Paragraph()
+                .add("Hecho por: Sistema\n")
+                .add("Fecha: " + currentDate + "\n")
+                .add("Hora: " + currentTime)
+                .setFontSize(10)
+                .setMarginBottom(5);
         document.add(reportInfo);
 
-        // Línea separadora
-        com.itextpdf.layout.element.LineSeparator lineSeparator2 = 
+        // Línea separadora 2
+        com.itextpdf.layout.element.LineSeparator line2 = 
             new com.itextpdf.layout.element.LineSeparator(
                 new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f));
-        lineSeparator2.setMarginBottom(15);
-        document.add(lineSeparator2);
+        line2.setStrokeColor(greyLineColor);
+        line2.setMarginBottom(8);
+        document.add(line2);
 
-        // Color principal para medidas
-        DeviceRgb measurementColor = new DeviceRgb(207, 173, 4); // Amarillo del sistema
+        // DATOS DEL CLIENTE
+        Paragraph clientTitle = new Paragraph("DATOS DEL CLIENTE")
+                .setFontSize(11)
+                .setBold()
+                .setMarginBottom(5);
+        document.add(clientTitle);
 
-        // Si hay medidas, mostrarlas
+        int age = calculateAge(client.getPerson().getBirthday());
+        Float height = measurements.isEmpty() ? 0f : measurements.get(0).getHeight();
+        
+        Paragraph clientInfo = new Paragraph()
+                .add("Nombre: " + clientName + "\n")
+                .add("Edad: " + age + " años\n")
+                .add("Estatura: " + formatFloat(height) + " cm")
+                .setFontSize(10)
+                .setMarginBottom(5);
+        document.add(clientInfo);
+
+        // Línea separadora 3
+        com.itextpdf.layout.element.LineSeparator line3 = 
+            new com.itextpdf.layout.element.LineSeparator(
+                new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f));
+        line3.setStrokeColor(greyLineColor);
+        line3.setMarginBottom(10);
+        document.add(line3);
+
         if (!measurements.isEmpty()) {
-            // Ordenar medidas por fecha (más reciente primero)
             java.util.List<Measurement> sortedMeasurements = new java.util.ArrayList<>(measurements);
             sortedMeasurements.sort((a, b) -> b.getMeasurementDate().compareTo(a.getMeasurementDate()));
 
-            // Iterar sobre las medidas
-            for (int i = 0; i < sortedMeasurements.size(); i++) {
-                Measurement m = sortedMeasurements.get(i);
-                
-                // Título de la medición con color
-                Paragraph measurementTitle = new Paragraph("MEDICIÓN #" + (i + 1))
-                        .setFontSize(14)
-                        .setBold()
-                        .setFontColor(measurementColor)
-                        .setMarginTop(12)
-                        .setMarginBottom(2);
-                document.add(measurementTitle);
-                
-                // Fecha de medición
-                Paragraph dateInfo = new Paragraph("Fecha: " + DATE_FORMAT.format(m.getMeasurementDate()))
-                        .setFontSize(10)
-                        .setMarginBottom(8);
-                document.add(dateInfo);
-                
-                // Línea divisoria
-                com.itextpdf.layout.element.LineSeparator lineSeparator = 
-                    new com.itextpdf.layout.element.LineSeparator(
-                        new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(1f));
-                lineSeparator.setStrokeColor(measurementColor);
-                lineSeparator.setMarginBottom(10);
-                document.add(lineSeparator);
+            // RESUMEN (si hay más de 1 medida)
+            if (sortedMeasurements.size() > 1) {
+                Measurement first = sortedMeasurements.get(sortedMeasurements.size() - 1);
+                Measurement last = sortedMeasurements.get(0);
 
-                lineSeparator.setStrokeColor(measurementColor);
-                lineSeparator.setMarginBottom(10);
-                document.add(lineSeparator);
+                Table summaryTable = new Table(UnitValue.createPercentArray(new float[]{2, 1, 1, 1}))
+                        .setWidth(UnitValue.createPercentValue(50))
+                        .setMarginBottom(10);
 
-                // Subtítulo: Datos Generales
-                Paragraph generalTitle = new Paragraph("Datos Generales")
-                        .setFontSize(11)
-                        .setBold()
-                        .setFontColor(measurementColor)
-                        .setMarginBottom(5)
-                        .setMarginLeft(5);
-                document.add(generalTitle);
+                summaryTable.addHeaderCell(createStyledHeaderCell("RESUMEN", yellowColor, 9));
+                summaryTable.addHeaderCell(createStyledHeaderCell("INICIO", yellowColor, 9));
+                summaryTable.addHeaderCell(createStyledHeaderCell("ACTUAL", yellowColor, 9));
+                summaryTable.addHeaderCell(createStyledHeaderCell("CAMBIO", yellowColor, 9));
 
-                // Tabla de medidas generales con color amarillo
-                Table generalTable = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1, 1, 1}))
-                        .setWidth(UnitValue.createPercentValue(100))
-                        .setMarginLeft(10);
+                summaryTable.addCell(createStyledDataCell("Peso (kg)", 9));
+                summaryTable.addCell(createStyledDataCell(formatFloat(first.getWeight()), 9));
+                summaryTable.addCell(createStyledDataCell(formatFloat(last.getWeight()), 9));
+                summaryTable.addCell(createStyledDataCell(calcIndicator(first.getWeight(), last.getWeight()), 9));
 
-                // Headers con color amarillo
-                Cell headerCell1 = new Cell()
-                        .add(new Paragraph("Peso (kg)").setBold().setFontColor(ColorConstants.WHITE).setFontSize(9))
-                        .setBackgroundColor(measurementColor)
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(5);
-                Cell headerCell2 = new Cell()
-                        .add(new Paragraph("Altura (cm)").setBold().setFontColor(ColorConstants.WHITE).setFontSize(9))
-                        .setBackgroundColor(measurementColor)
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(5);
-                Cell headerCell3 = new Cell()
-                        .add(new Paragraph("Masa Muscular").setBold().setFontColor(ColorConstants.WHITE).setFontSize(9))
-                        .setBackgroundColor(measurementColor)
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(5);
-                Cell headerCell4 = new Cell()
-                        .add(new Paragraph("% Grasa Corporal").setBold().setFontColor(ColorConstants.WHITE).setFontSize(9))
-                        .setBackgroundColor(measurementColor)
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(5);
-                Cell headerCell5 = new Cell()
-                        .add(new Paragraph("% Grasa Visceral").setBold().setFontColor(ColorConstants.WHITE).setFontSize(9))
-                        .setBackgroundColor(measurementColor)
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(5);
-                
-                generalTable.addHeaderCell(headerCell1);
-                generalTable.addHeaderCell(headerCell2);
-                generalTable.addHeaderCell(headerCell3);
-                generalTable.addHeaderCell(headerCell4);
-                generalTable.addHeaderCell(headerCell5);
+                summaryTable.addCell(createStyledDataCell("IMC", 9));
+                summaryTable.addCell(createStyledDataCell(formatFloat(first.getBmi()), 9));
+                summaryTable.addCell(createStyledDataCell(formatFloat(last.getBmi()), 9));
+                summaryTable.addCell(createStyledDataCell(calcIndicator(first.getBmi(), last.getBmi()), 9));
 
-                generalTable.addCell(createMeasurementCell(formatFloat(m.getWeight())));
-                generalTable.addCell(createMeasurementCell(formatFloat(m.getHeight())));
-                generalTable.addCell(createMeasurementCell(formatFloat(m.getMuscleMass())));
-                generalTable.addCell(createMeasurementCell(formatFloat(m.getBodyFatPercentage())));
-                generalTable.addCell(createMeasurementCell(formatFloat(m.getVisceralFatPercentage())));
+                summaryTable.addCell(createStyledDataCell("Masa Muscular (%)", 9));
+                summaryTable.addCell(createStyledDataCell(formatFloat(first.getMuscleMass()), 9));
+                summaryTable.addCell(createStyledDataCell(formatFloat(last.getMuscleMass()), 9));
+                summaryTable.addCell(createStyledDataCell(calcIndicator(first.getMuscleMass(), last.getMuscleMass()), 9));
 
-                document.add(generalTable);
+                summaryTable.addCell(createStyledDataCell("Grasa Corporal (%)", 9));
+                summaryTable.addCell(createStyledDataCell(formatFloat(first.getBodyFatPercentage()), 9));
+                summaryTable.addCell(createStyledDataCell(formatFloat(last.getBodyFatPercentage()), 9));
+                summaryTable.addCell(createStyledDataCell(calcIndicator(first.getBodyFatPercentage(), last.getBodyFatPercentage()), 9));
 
-                // Subtítulo: Medidas Corporales
-                Paragraph bodyMeasuresTitle = new Paragraph("Medidas Corporales (cm)")
-                        .setFontSize(11)
-                        .setBold()
-                        .setFontColor(measurementColor)
-                        .setMarginTop(12)
-                        .setMarginBottom(5)
-                        .setMarginLeft(5);
-                document.add(bodyMeasuresTitle);
-
-                // Tabla de medidas corporales
-                Table bodyTable = new Table(UnitValue.createPercentArray(new float[]{1.5f, 1, 1.5f, 1}))
-                        .setWidth(UnitValue.createPercentValue(100))
-                        .setMarginLeft(10);
-
-                // Headers con color amarillo
-                Cell bodyHeader1 = new Cell()
-                        .add(new Paragraph("Medida").setBold().setFontColor(ColorConstants.WHITE).setFontSize(9))
-                        .setBackgroundColor(measurementColor)
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(5);
-                Cell bodyHeader2 = new Cell()
-                        .add(new Paragraph("Valor").setBold().setFontColor(ColorConstants.WHITE).setFontSize(9))
-                        .setBackgroundColor(measurementColor)
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(5);
-                Cell bodyHeader3 = new Cell()
-                        .add(new Paragraph("Medida").setBold().setFontColor(ColorConstants.WHITE).setFontSize(9))
-                        .setBackgroundColor(measurementColor)
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(5);
-                Cell bodyHeader4 = new Cell()
-                        .add(new Paragraph("Valor").setBold().setFontColor(ColorConstants.WHITE).setFontSize(9))
-                        .setBackgroundColor(measurementColor)
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(5);
-
-                bodyTable.addHeaderCell(bodyHeader1);
-                bodyTable.addHeaderCell(bodyHeader2);
-                bodyTable.addHeaderCell(bodyHeader3);
-                bodyTable.addHeaderCell(bodyHeader4);
-
-                addMeasurementRowStyled(bodyTable, "Pecho", m.getChestSize(), "Cadera", m.getHipSize());
-                addMeasurementRowStyled(bodyTable, "Espalda", m.getBackSize(), "Cintura", m.getWaistSize());
-                addMeasurementRowStyled(bodyTable, "Pierna Izq.", m.getLeftLegSize(), "Pierna Der.", m.getRightLegSize());
-                addMeasurementRowStyled(bodyTable, "Pantorrilla Izq.", m.getLeftCalfSize(), "Pantorrilla Der.", m.getRightCalfSize());
-                addMeasurementRowStyled(bodyTable, "Antebrazo Izq.", m.getLeftForeArmSize(), "Antebrazo Der.", m.getRightForeArmSize());
-                addMeasurementRowStyled(bodyTable, "Brazo Izq.", m.getLeftArmSize(), "Brazo Der.", m.getRightArmSize());
-
-                document.add(bodyTable);
+                document.add(summaryTable);
             }
+
+            // 1. MEDIDAS BÁSICAS Y COMPOSICIÓN
+            Paragraph section1Title = new Paragraph("MEDIDAS BÁSICAS Y COMPOSICIÓN")
+                    .setFontSize(11)
+                    .setBold()
+                    .setMarginTop(10)
+                    .setMarginBottom(5);
+            document.add(section1Title);
+
+            Table basicTable = new Table(UnitValue.createPercentArray(new float[]{1.5f, 1, 1, 1, 1, 1, 1}))
+                    .setWidth(UnitValue.createPercentValue(100));
+
+            basicTable.addHeaderCell(createStyledHeaderCell("Fecha", yellowColor, 8));
+            basicTable.addHeaderCell(createStyledHeaderCell("Peso (kg)", yellowColor, 8));
+            basicTable.addHeaderCell(createStyledHeaderCell("Altura (cm)", yellowColor, 8));
+            basicTable.addHeaderCell(createStyledHeaderCell("IMC", yellowColor, 8));
+            basicTable.addHeaderCell(createStyledHeaderCell("Masa Musc. (%)", yellowColor, 8));
+            basicTable.addHeaderCell(createStyledHeaderCell("Grasa Corp. (%)", yellowColor, 8));
+            basicTable.addHeaderCell(createStyledHeaderCell("Grasa Visc. (%)", yellowColor, 8));
+
+            boolean alternate = false;
+            for (Measurement m : sortedMeasurements) {
+                DeviceRgb bgColor = alternate ? new DeviceRgb(245, 245, 245) : new DeviceRgb(255, 255, 255);
+                basicTable.addCell(createStripedDataCell(DATE_FORMAT.format(m.getMeasurementDate()), bgColor, 8));
+                basicTable.addCell(createStripedDataCell(formatFloat(m.getWeight()), bgColor, 8));
+                basicTable.addCell(createStripedDataCell(formatFloat(m.getHeight()), bgColor, 8));
+                basicTable.addCell(createStripedDataCell(formatFloat(m.getBmi()), bgColor, 8));
+                basicTable.addCell(createStripedDataCell(formatFloat(m.getMuscleMass()), bgColor, 8));
+                basicTable.addCell(createStripedDataCell(formatFloat(m.getBodyFatPercentage()), bgColor, 8));
+                basicTable.addCell(createStripedDataCell(formatFloat(m.getVisceralFatPercentage()), bgColor, 8));
+                alternate = !alternate;
+            }
+
+            document.add(basicTable);
+
+            // 2. MEDIDAS DEL TORSO
+            Paragraph section2Title = new Paragraph("MEDIDAS DEL TORSO")
+                    .setFontSize(11)
+                    .setBold()
+                    .setMarginTop(10)
+                    .setMarginBottom(5);
+            document.add(section2Title);
+
+            Table torsoTable = new Table(UnitValue.createPercentArray(new float[]{2, 1, 1, 1, 1}))
+                    .setWidth(UnitValue.createPercentValue(100));
+
+            torsoTable.addHeaderCell(createStyledHeaderCell("Fecha", yellowColor, 8));
+            torsoTable.addHeaderCell(createStyledHeaderCell("Pecho (cm)", yellowColor, 8));
+            torsoTable.addHeaderCell(createStyledHeaderCell("Espalda (cm)", yellowColor, 8));
+            torsoTable.addHeaderCell(createStyledHeaderCell("Cintura (cm)", yellowColor, 8));
+            torsoTable.addHeaderCell(createStyledHeaderCell("Cadera (cm)", yellowColor, 8));
+
+            alternate = false;
+            for (Measurement m : sortedMeasurements) {
+                DeviceRgb bgColor = alternate ? new DeviceRgb(245, 245, 245) : new DeviceRgb(255, 255, 255);
+                torsoTable.addCell(createStripedDataCell(DATE_FORMAT.format(m.getMeasurementDate()), bgColor, 8));
+                torsoTable.addCell(createStripedDataCell(formatFloat(m.getChestSize()), bgColor, 8));
+                torsoTable.addCell(createStripedDataCell(formatFloat(m.getBackSize()), bgColor, 8));
+                torsoTable.addCell(createStripedDataCell(formatFloat(m.getWaistSize()), bgColor, 8));
+                torsoTable.addCell(createStripedDataCell(formatFloat(m.getHipSize()), bgColor, 8));
+                alternate = !alternate;
+            }
+
+            document.add(torsoTable);
+
+            // 3. BRAZOS
+            Paragraph section3Title = new Paragraph("BRAZOS")
+                    .setFontSize(11)
+                    .setBold()
+                    .setMarginTop(10)
+                    .setMarginBottom(5);
+            document.add(section3Title);
+
+            Table armTable = new Table(UnitValue.createPercentArray(new float[]{2, 1, 1, 1, 1}))
+                    .setWidth(UnitValue.createPercentValue(100));
+
+            armTable.addHeaderCell(createStyledHeaderCell("Fecha", yellowColor, 8));
+            armTable.addHeaderCell(createStyledHeaderCell("Brazo Der. (cm)", yellowColor, 8));
+            armTable.addHeaderCell(createStyledHeaderCell("Brazo Izq. (cm)", yellowColor, 8));
+            armTable.addHeaderCell(createStyledHeaderCell("Antebrazo Der. (cm)", yellowColor, 8));
+            armTable.addHeaderCell(createStyledHeaderCell("Antebrazo Izq. (cm)", yellowColor, 8));
+
+            alternate = false;
+            for (Measurement m : sortedMeasurements) {
+                DeviceRgb bgColor = alternate ? new DeviceRgb(245, 245, 245) : new DeviceRgb(255, 255, 255);
+                armTable.addCell(createStripedDataCell(DATE_FORMAT.format(m.getMeasurementDate()), bgColor, 8));
+                armTable.addCell(createStripedDataCell(formatFloat(m.getRightArmSize()), bgColor, 8));
+                armTable.addCell(createStripedDataCell(formatFloat(m.getLeftArmSize()), bgColor, 8));
+                armTable.addCell(createStripedDataCell(formatFloat(m.getRightForeArmSize()), bgColor, 8));
+                armTable.addCell(createStripedDataCell(formatFloat(m.getLeftForeArmSize()), bgColor, 8));
+                alternate = !alternate;
+            }
+
+            document.add(armTable);
+
+            // 4. PIERNAS
+            Paragraph section4Title = new Paragraph("PIERNAS")
+                    .setFontSize(11)
+                    .setBold()
+                    .setMarginTop(10)
+                    .setMarginBottom(5);
+            document.add(section4Title);
+
+            Table legTable = new Table(UnitValue.createPercentArray(new float[]{2, 1, 1, 1, 1}))
+                    .setWidth(UnitValue.createPercentValue(100));
+
+            legTable.addHeaderCell(createStyledHeaderCell("Fecha", yellowColor, 8));
+            legTable.addHeaderCell(createStyledHeaderCell("Pierna Der. (cm)", yellowColor, 8));
+            legTable.addHeaderCell(createStyledHeaderCell("Pierna Izq. (cm)", yellowColor, 8));
+            legTable.addHeaderCell(createStyledHeaderCell("Pantorrilla Der. (cm)", yellowColor, 8));
+            legTable.addHeaderCell(createStyledHeaderCell("Pantorrilla Izq. (cm)", yellowColor, 8));
+
+            alternate = false;
+            for (Measurement m : sortedMeasurements) {
+                DeviceRgb bgColor = alternate ? new DeviceRgb(245, 245, 245) : new DeviceRgb(255, 255, 255);
+                legTable.addCell(createStripedDataCell(DATE_FORMAT.format(m.getMeasurementDate()), bgColor, 8));
+                legTable.addCell(createStripedDataCell(formatFloat(m.getRightLegSize()), bgColor, 8));
+                legTable.addCell(createStripedDataCell(formatFloat(m.getLeftLegSize()), bgColor, 8));
+                legTable.addCell(createStripedDataCell(formatFloat(m.getRightCalfSize()), bgColor, 8));
+                legTable.addCell(createStripedDataCell(formatFloat(m.getLeftCalfSize()), bgColor, 8));
+                alternate = !alternate;
+            }
+
+            document.add(legTable);
+
+            // Mensaje motivacional
+            String[] motivationalMessages = {
+                "¡Sigue así! La constancia es la clave del éxito.",
+                "Cada pequeño esfuerzo te acerca más a tu mejor versión.",
+                "Tu disciplina está dando resultados. No te detengas.",
+                "El progreso es lento, pero seguro. ¡Excelente trabajo!"
+            };
+            String message = motivationalMessages[(int) (Math.random() * motivationalMessages.length)];
+
+            Paragraph motivationalMsg = new Paragraph(message)
+                    .setFontSize(11)
+                    .setItalic()
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(15);
+            document.add(motivationalMsg);
+
+            // Nueva página para tabla de referencias
+            document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+
+            Paragraph refTitle = new Paragraph("TABLA DE REFERENCIAS")
+                    .setFontSize(14)
+                    .setBold()
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(15);
+            document.add(refTitle);
+
+            // Tabla de referencias
+            Table refTable = new Table(UnitValue.createPercentArray(new float[]{1.5f, 1, 1, 1, 1}))
+                    .setWidth(UnitValue.createPercentValue(70));
+
+            DeviceRgb refHeaderColor = new DeviceRgb(230, 230, 230);
+            DeviceRgb refLabelColor = new DeviceRgb(242, 242, 242);
+            
+            refTable.addHeaderCell(createReferenceHeaderCell("", refHeaderColor));
+            refTable.addHeaderCell(createReferenceHeaderCell("BAJO", refHeaderColor));
+            refTable.addHeaderCell(createReferenceHeaderCell("NORMAL", refHeaderColor));
+            refTable.addHeaderCell(createReferenceHeaderCell("ELEVADO", refHeaderColor));
+            refTable.addHeaderCell(createReferenceHeaderCell("MUY ELEVADO", refHeaderColor));
+
+            String[][] referenceData = {
+                {"IMC", "<18.5", "18.5 a 25", "25 a 30", "30 o +"},
+                {"VISCERAL", "", "<9", "10 a 14", "15 o +"},
+                {"GRASA C", "FEM / MAS", "FEM / MAS", "FEM / MAS", "FEM / MAS"},
+                {"20-39", "<21 / <8", "21-22.9 / 8-19.9", "33-38.9 / 20-24.9", ">39 / >25"},
+                {"40-59", "<23 / <11", "23-33.9 / 11-21.9", "34-39.9 / 22-24.9", ">40 / >28"},
+                {"60-79", "<24 / <13", "24-35.9 / 13-24.9", "36-41.9 / 25-29.9", ">42 / >30"},
+                {"M.M", "FEM / MAS", "FEM / MAS", "FEM / MAS", "FEM / MAS"},
+                {"18-39", "<24.3 / <33.3", "24.3-30.3 / 33.3-39.3", "30.4-35.3 / 39.4-44", ">35.4 / >44.1"},
+                {"40-59", "<24.1 / <33.1", "24.1-30.1 / 33.1-39.1", "30.2-35.1 / 39.2-43.8", ">35.2 / >43.9"},
+                {"60-80", "<23.9 / <32.9", "23.9-29.9 / 32.9-38.9", "30-34.9 / 39-43.6", ">35 / >43.7"}
+            };
+
+            for (String[] rowData : referenceData) {
+                refTable.addCell(createReferenceLabelCell(rowData[0], refLabelColor));
+                for (int i = 1; i < rowData.length; i++) {
+                    refTable.addCell(createReferenceDataCell(rowData[i]));
+                }
+            }
+
+            document.add(refTable);
+
         } else {
             document.add(new Paragraph("No hay medidas registradas para este cliente.")
                     .setItalic()
@@ -485,33 +607,76 @@ public class PdfGeneratorService {
         return baos.toByteArray();
     }
 
-    private Cell createMeasurementCell(String text) {
+    private Cell createStyledHeaderCell(String text, DeviceRgb color, int fontSize) {
         return new Cell()
-                .add(new Paragraph(text != null ? text : "N/A").setFontSize(9))
-                .setBackgroundColor(new DeviceRgb(245, 245, 245))
+                .add(new Paragraph(text).setBold().setFontColor(ColorConstants.BLACK).setFontSize(fontSize))
+                .setBackgroundColor(color)
                 .setTextAlignment(TextAlignment.CENTER)
-                .setPadding(5);
+                .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                .setPadding(2);
     }
 
-    private void addMeasurementRowStyled(Table table, String label1, Float value1, String label2, Float value2) {
-        table.addCell(new Cell()
-                .add(new Paragraph(label1).setFontSize(9))
-                .setBackgroundColor(new DeviceRgb(255, 255, 255))
-                .setPadding(5));
-        table.addCell(new Cell()
-                .add(new Paragraph(formatFloat(value1)).setFontSize(9))
-                .setBackgroundColor(new DeviceRgb(245, 245, 245))
+    private Cell createStyledDataCell(String text, int fontSize) {
+        return new Cell()
+                .add(new Paragraph(text != null ? text : "N/A").setFontSize(fontSize))
                 .setTextAlignment(TextAlignment.CENTER)
-                .setPadding(5));
-        table.addCell(new Cell()
-                .add(new Paragraph(label2).setFontSize(9))
-                .setBackgroundColor(new DeviceRgb(255, 255, 255))
-                .setPadding(5));
-        table.addCell(new Cell()
-                .add(new Paragraph(formatFloat(value2)).setFontSize(9))
-                .setBackgroundColor(new DeviceRgb(245, 245, 245))
+                .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                .setPadding(2);
+    }
+
+    private Cell createStripedDataCell(String text, DeviceRgb bgColor, int fontSize) {
+        return new Cell()
+                .add(new Paragraph(text != null ? text : "N/A").setFontSize(fontSize))
+                .setBackgroundColor(bgColor)
                 .setTextAlignment(TextAlignment.CENTER)
-                .setPadding(5));
+                .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                .setPadding(2);
+    }
+
+    private Cell createReferenceHeaderCell(String text, DeviceRgb color) {
+        return new Cell()
+                .add(new Paragraph(text).setBold().setFontSize(7))
+                .setBackgroundColor(color)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                .setPadding(1)
+                .setBorder(new com.itextpdf.layout.borders.SolidBorder(ColorConstants.BLACK, 0.5f));
+    }
+
+    private Cell createReferenceLabelCell(String text, DeviceRgb color) {
+        return new Cell()
+                .add(new Paragraph(text).setBold().setFontSize(7))
+                .setBackgroundColor(color)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                .setPadding(1)
+                .setBorder(new com.itextpdf.layout.borders.SolidBorder(ColorConstants.BLACK, 0.5f));
+    }
+
+    private Cell createReferenceDataCell(String text) {
+        return new Cell()
+                .add(new Paragraph(text != null ? text : "").setFontSize(7))
+                .setTextAlignment(TextAlignment.CENTER)
+                .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                .setPadding(1)
+                .setBorder(new com.itextpdf.layout.borders.SolidBorder(ColorConstants.BLACK, 0.5f));
+    }
+
+    private String calcIndicator(Float start, Float end) {
+        if (start == null || end == null) return "—";
+        float diff = end - start;
+        if (Math.abs(diff) < 0.01) return "—";
+        String formatted = String.format("%.1f", diff);
+        if (diff > 0) {
+            return "▲ +" + formatted;
+        } else {
+            return "▼ " + formatted;
+        }
+    }
+
+    private int calculateAge(LocalDate birthDate) {
+        if (birthDate == null) return 0;
+        return Period.between(birthDate, LocalDate.now()).getYears();
     }
 
     private String formatFloat(Float value) {
@@ -524,3 +689,4 @@ public class PdfGeneratorService {
         return String.format("%.2f", value);
     }
 }
+

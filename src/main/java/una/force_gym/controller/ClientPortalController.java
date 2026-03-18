@@ -36,6 +36,7 @@ import una.force_gym.repository.ClientExerciseNoteRepository;
 import una.force_gym.repository.RoutineExerciseRepository;
 import una.force_gym.service.ClientAuthService;
 import una.force_gym.service.PdfGeneratorService;
+import una.force_gym.service.ExcelGeneratorService;
 import una.force_gym.service.ClientPasswordResetService;
 import una.force_gym.service.LoginAttemptService;
 import una.force_gym.domain.ClientPasswordResetToken;
@@ -52,6 +53,9 @@ public class ClientPortalController {
 
     @Autowired
     private PdfGeneratorService pdfGeneratorService;
+
+    @Autowired
+    private ExcelGeneratorService excelGeneratorService;
 
     @Autowired
     private ClientRepository clientRepository;
@@ -357,6 +361,33 @@ public class ClientPortalController {
         } catch (Exception e) {
             ApiResponse<String> errorResponse = new ApiResponse<>();
             errorResponse.setMessage("Error al generar PDF: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para descargar Excel de medidas
+     */
+    @GetMapping("/download-measurements-excel")
+    public ResponseEntity<?> downloadMeasurementsExcel(@RequestHeader("Authorization") String authHeader) {
+        try {
+            Long clientId = extractClientIdFromToken(authHeader);
+            
+            Client client = clientRepository.findById(clientId)
+                    .orElseThrow(() -> new Exception("Cliente no encontrado"));
+            
+            List<Measurement> measurements = clientAuthService.getClientMeasurements(clientId);
+            
+            byte[] excelBytes = excelGeneratorService.generateMeasurementsExcel(client, measurements);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", "mis_medidas.xlsx");
+
+            return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            ApiResponse<String> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al generar Excel: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }

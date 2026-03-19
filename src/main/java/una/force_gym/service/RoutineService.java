@@ -305,6 +305,7 @@ public class RoutineService {
                 .stream()
                 .map(assignment -> {
                     RoutineAssignmentDTO assignmentDto = new RoutineAssignmentDTO();
+                    assignmentDto.setIdRoutineAssignment(assignment.getIdRoutineAssignment());
                     assignmentDto.setIdClient(assignment.getClient().getIdClient());
                     assignmentDto.setAssignmentDate(assignment.getAssignmentDate());
                     return assignmentDto;

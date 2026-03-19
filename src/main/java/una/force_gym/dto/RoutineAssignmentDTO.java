@@ -4,6 +4,7 @@ import java.util.Date;
 
 public class RoutineAssignmentDTO {
 
+    private Long idRoutineAssignment;
     private Long idClient;
     private Date assignmentDate;
 
@@ -13,6 +14,14 @@ public class RoutineAssignmentDTO {
     public RoutineAssignmentDTO(Date assignmentDate, Long idClient) {
         this.assignmentDate = assignmentDate;
         this.idClient = idClient;
+    }
+
+    public Long getIdRoutineAssignment() {
+        return idRoutineAssignment;
+    }
+
+    public void setIdRoutineAssignment(Long idRoutineAssignment) {
+        this.idRoutineAssignment = idRoutineAssignment;
     }
 
     public Long getIdClient() {

@@ -145,30 +145,23 @@ public class EconomicExpenseService {
                                 String pDetail, Long pIdMeanOfPayment, Long pIdCategory, 
                                 Float pAmount, Long pLoggedIdUser) {
         try {
-            System.out.println("=== DEBUG ADD EXPENSE ===");
-            System.out.println("pIdUser: " + pIdUser);
-            System.out.println("pVoucherNumber: " + pVoucherNumber);
-            System.out.println("pAmount: " + pAmount);
+            // Convertir voucher vacío a null para evitar error de duplicado
+            String processedVoucher = (pVoucherNumber != null && pVoucherNumber.trim().isEmpty()) ? null : pVoucherNumber;
             
-            int result = economicExpenseRepo.addEconomicExpense(pIdUser, pRegistrationDate, pVoucherNumber, 
+            return economicExpenseRepo.addEconomicExpense(pIdUser, pRegistrationDate, processedVoucher, 
                                                             pDetail, pIdMeanOfPayment, pIdCategory, 
                                                             pAmount, pLoggedIdUser);
             
-            System.out.println("Result from repository: " + result);
-            return result;
-            
         } catch (Exception e) {
-            System.out.println("=== ERROR IN ADD EXPENSE ===");
-            System.out.println("Error type: " + e.getClass().getName());
-            System.out.println("Error message: " + e.getMessage());
-            e.printStackTrace();
             throw e;
         }
     }
 
     @Transactional
     public int updateEconomicExpense(Long pIdEconomicExpense, Long pIdUser, LocalDate pRegistrationDate, String pVoucherNumber, String pDetail, Long pIdMeanOfPayment, Long pIdCategory, Float pAmount, Long pIsDeleted, Long pLoggedIdUser){
-        return economicExpenseRepo.updateEconomicExpense(pIdEconomicExpense, pIdUser, pRegistrationDate, pVoucherNumber, pDetail, pIdMeanOfPayment, pIdCategory, pAmount, pIsDeleted, pLoggedIdUser);
+        // Convertir voucher vacío a null para evitar error de duplicado
+        String processedVoucher = (pVoucherNumber != null && pVoucherNumber.trim().isEmpty()) ? null : pVoucherNumber;
+        return economicExpenseRepo.updateEconomicExpense(pIdEconomicExpense, pIdUser, pRegistrationDate, processedVoucher, pDetail, pIdMeanOfPayment, pIdCategory, pAmount, pIsDeleted, pLoggedIdUser);
     }
 
     @Transactional

@@ -80,6 +80,7 @@ public class EconomicExpenseController {
 
     @PostMapping("/add")
     public ResponseEntity<ApiResponse<String>> addEconomicExpense(@RequestBody EconomicExpenseDTO economicExpenseDTO) {
+        
         int result = economicExpenseService.addEconomicExpense(
             economicExpenseDTO.getIdUser(), 
             economicExpenseDTO.getRegistrationDate(), 

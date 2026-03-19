@@ -285,6 +285,236 @@ public class PdfGeneratorService {
     }
 
     /**
+     * Genera un PDF con una rutina sin cliente asignado (para exportación general desde gestión de rutinas)
+     */
+    public byte[] generateRoutinePdfWithoutClient(una.force_gym.domain.Routine routine) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PdfWriter writer = new PdfWriter(baos);
+        PdfDocument pdf = new PdfDocument(writer);
+        Document document = new Document(pdf);
+
+        // Fecha y hora actuales
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
+        String currentDate = dateFormat.format(new java.util.Date());
+        String currentTime = timeFormat.format(new java.util.Date());
+
+        // Header con información del reporte
+        Paragraph header = new Paragraph("RUTINA DE ENTRENAMIENTO")
+                .setFontSize(18)
+                .setBold()
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(5);
+        document.add(header);
+
+        // Línea separadora
+        com.itextpdf.layout.element.LineSeparator lineSeparator1 = 
+            new com.itextpdf.layout.element.LineSeparator(
+                new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f));
+        lineSeparator1.setMarginTop(5);
+        lineSeparator1.setMarginBottom(10);
+        document.add(lineSeparator1);
+
+        // Información del reporte
+        Paragraph reportInfo = new Paragraph(
+                "Fecha del reporte: " + currentDate + "\n" +
+                "Hora del reporte: " + currentTime
+        ).setFontSize(10).setMarginBottom(15);
+        document.add(reportInfo);
+
+        // Línea separadora
+        com.itextpdf.layout.element.LineSeparator lineSeparator2 = 
+            new com.itextpdf.layout.element.LineSeparator(
+                new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f));
+        lineSeparator2.setMarginBottom(15);
+        document.add(lineSeparator2);
+
+        // Nombre de la rutina
+        Paragraph routineName = new Paragraph(routine.getName())
+                .setFontSize(16)
+                .setBold()
+                .setMarginTop(10)
+                .setMarginBottom(5);
+        document.add(routineName);
+
+        // Información de la rutina
+        Paragraph routineInfo = new Paragraph(
+                "Fecha de creación: " + DATE_FORMAT.format(routine.getDate()) + " | " +
+                "Dificultad: " + (routine.getDifficultyRoutine() != null ? 
+                    routine.getDifficultyRoutine().getName() : "N/A")
+        ).setFontSize(9).setMarginBottom(10);
+        document.add(routineInfo);
+
+        // Tabla de ejercicios
+        if (routine.getExercises() != null && !routine.getExercises().isEmpty()) {
+            
+            // Agrupar ejercicios por día
+            java.util.Map<Integer, java.util.List<RoutineExercise>> exercisesByDay = new java.util.TreeMap<>();
+            for (RoutineExercise re : routine.getExercises()) {
+                Integer day = re.getDayNumber() != null ? re.getDayNumber() : 1;
+                exercisesByDay.computeIfAbsent(day, k -> new java.util.ArrayList<>()).add(re);
+            }
+
+            // Crear sección para cada día
+            for (java.util.Map.Entry<Integer, java.util.List<RoutineExercise>> dayEntry : exercisesByDay.entrySet()) {
+                Integer dayNumber = dayEntry.getKey();
+                DeviceRgb dayColor = DAY_COLORS[(dayNumber - 1) % DAY_COLORS.length];
+                
+                // Título del día (más grande y destacado)
+                Paragraph dayTitle = new Paragraph("DÍA " + dayNumber)
+                        .setFontSize(16)
+                        .setBold()
+                        .setFontColor(dayColor)
+                        .setMarginTop(12)
+                        .setMarginBottom(2);
+                document.add(dayTitle);
+                
+                // Línea divisoria del día
+                com.itextpdf.layout.element.LineSeparator lineSeparator = 
+                    new com.itextpdf.layout.element.LineSeparator(
+                        new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(2f));
+                lineSeparator.setStrokeColor(dayColor);
+                lineSeparator.setMarginBottom(8);
+                document.add(lineSeparator);
+
+                // Agrupar ejercicios del día por categoría
+                java.util.Map<String, java.util.List<RoutineExercise>> exercisesByCategory = new java.util.HashMap<>();
+                for (RoutineExercise re : dayEntry.getValue()) {
+                    String category = (re.getExercise() != null && 
+                                     re.getExercise().getExerciseCategory() != null && 
+                                     re.getExercise().getExerciseCategory().getName() != null) 
+                            ? re.getExercise().getExerciseCategory().getName() 
+                            : "Otros";
+                    exercisesByCategory.computeIfAbsent(category, k -> new java.util.ArrayList<>()).add(re);
+                }
+                
+                // Ordenar ejercicios dentro de cada categoría por categoryOrder y luego por id
+                for (java.util.List<RoutineExercise> exercises : exercisesByCategory.values()) {
+                    exercises.sort((a, b) -> {
+                        if (!a.getCategoryOrder().equals(b.getCategoryOrder())) {
+                            return a.getCategoryOrder().compareTo(b.getCategoryOrder());
+                        }
+                        return a.getIdRoutineExercise().compareTo(b.getIdRoutineExercise());
+                    });
+                }
+
+                // Ordenar categorías por el mínimo categoryOrder de sus ejercicios
+                java.util.List<java.util.Map.Entry<String, java.util.List<RoutineExercise>>> sortedCategories = 
+                    new java.util.ArrayList<>(exercisesByCategory.entrySet());
+                sortedCategories.sort((a, b) -> {
+                    Integer minOrderA = a.getValue().stream()
+                        .map(RoutineExercise::getCategoryOrder)
+                        .min(Integer::compareTo)
+                        .orElse(Integer.MAX_VALUE);
+                    Integer minOrderB = b.getValue().stream()
+                        .map(RoutineExercise::getCategoryOrder)
+                        .min(Integer::compareTo)
+                        .orElse(Integer.MAX_VALUE);
+                    return minOrderA.compareTo(minOrderB);
+                });
+
+                // Crear tabla para cada categoría (usando el color del día)
+                for (java.util.Map.Entry<String, java.util.List<RoutineExercise>> categoryEntry : sortedCategories) {
+                    // Título de la categoría
+                    Paragraph categoryTitle = new Paragraph("Categoría: " + categoryEntry.getKey())
+                            .setFontSize(12)
+                            .setBold()
+                            .setFontColor(dayColor)
+                            .setMarginTop(8)
+                            .setMarginBottom(4)
+                            .setMarginLeft(10);
+                    document.add(categoryTitle);
+
+                    Table table = new Table(UnitValue.createPercentArray(new float[]{3, 1, 1, 2}))
+                            .setWidth(UnitValue.createPercentValue(100))
+                            .setMarginLeft(15);
+
+                    // Encabezados con el color del día
+                    Cell headerCell1 = new Cell()
+                            .add(new Paragraph("Ejercicio").setBold().setFontColor(ColorConstants.WHITE))
+                            .setBackgroundColor(dayColor)
+                            .setTextAlignment(TextAlignment.CENTER)
+                            .setPadding(5);
+                    Cell headerCell2 = new Cell()
+                            .add(new Paragraph("Series").setBold().setFontColor(ColorConstants.WHITE))
+                            .setBackgroundColor(dayColor)
+                            .setTextAlignment(TextAlignment.CENTER)
+                            .setPadding(5);
+                    Cell headerCell3 = new Cell()
+                            .add(new Paragraph("Repeticiones").setBold().setFontColor(ColorConstants.WHITE))
+                            .setBackgroundColor(dayColor)
+                            .setTextAlignment(TextAlignment.CENTER)
+                            .setPadding(5);
+                    Cell headerCell4 = new Cell()
+                            .add(new Paragraph("Notas").setBold().setFontColor(ColorConstants.WHITE))
+                            .setBackgroundColor(dayColor)
+                            .setTextAlignment(TextAlignment.CENTER)
+                            .setPadding(5);
+                    
+                    table.addHeaderCell(headerCell1);
+                    table.addHeaderCell(headerCell2);
+                    table.addHeaderCell(headerCell3);
+                    table.addHeaderCell(headerCell4);
+
+                    // Filas de ejercicios de la categoría
+                    for (RoutineExercise re : categoryEntry.getValue()) {
+                        table.addCell(new Cell()
+                                .add(new Paragraph(re.getExercise() != null ? re.getExercise().getName() : "N/A").setFontSize(9))
+                                .setBackgroundColor(new DeviceRgb(245, 245, 245))
+                                .setPadding(5));
+                        table.addCell(new Cell()
+                                .add(new Paragraph(re.getSeries() != null ? re.getSeries().toString() : "N/A").setFontSize(9))
+                                .setBackgroundColor(new DeviceRgb(245, 245, 245))
+                                .setTextAlignment(TextAlignment.CENTER)
+                                .setPadding(5));
+                        table.addCell(new Cell()
+                                .add(new Paragraph(re.getRepetitions() != null ? re.getRepetitions().toString() : "N/A").setFontSize(9))
+                                .setBackgroundColor(new DeviceRgb(245, 245, 245))
+                                .setTextAlignment(TextAlignment.CENTER)
+                                .setPadding(5));
+                        table.addCell(new Cell()
+                                .add(new Paragraph(re.getNote() != null ? re.getNote() : "-").setFontSize(9))
+                                .setBackgroundColor(new DeviceRgb(245, 245, 245))
+                                .setPadding(5));
+                    }
+
+                    document.add(table);
+                }
+            }
+        } else {
+            document.add(new Paragraph("No hay ejercicios en esta rutina").setItalic());
+        }
+
+        // Agregar nueva página para instrucciones si es necesario
+        if (pdf.getNumberOfPages() > 0) {
+            document.add(new com.itextpdf.layout.element.AreaBreak(com.itextpdf.layout.properties.AreaBreakType.NEXT_PAGE));
+        }
+
+        // Instrucciones finales
+        Paragraph instructionsTitle = new Paragraph("INSTRUCCIONES DE ENTRENAMIENTO")
+                .setFontSize(14)
+                .setBold()
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(20)
+                .setMarginBottom(15);
+        document.add(instructionsTitle);
+
+        Paragraph instructions = new Paragraph(
+                "• Siga los ejercicios en el orden indicado.\n\n" +
+                "• Mantenga los movimientos controlados.\n\n" +
+                "• Respire correctamente durante todo el ejercicio.\n\n" +
+                "• Manténgase hidratado durante el entrenamiento.\n\n" +
+                "• Si presenta mareos o dolor, detenga el ejercicio."
+        ).setFontSize(11)
+         .setMarginLeft(50)
+         .setMarginRight(50);
+        document.add(instructions);
+
+        document.close();
+        return baos.toByteArray();
+    }
+
+    /**
      * Genera un PDF con las medidas de un cliente (formato admin landscape)
      */
     public byte[] generateMeasurementsPdf(Client client, List<Measurement> measurements) throws Exception {

@@ -309,29 +309,80 @@ public class ClientPortalController {
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Long idRoutineAssignment) {
         try {
+            System.out.println("=== INICIO DESCARGA PDF RUTINA ===");
+            System.out.println("ID Rutina Assignment: " + idRoutineAssignment);
+            
             Long clientId = extractClientIdFromToken(authHeader);
+            System.out.println("Client ID: " + clientId);
             
             Client client = clientRepository.findById(clientId)
                     .orElseThrow(() -> new Exception("Cliente no encontrado"));
+            System.out.println("Cliente encontrado: " + client.getPerson().getName());
             
             // Obtener todas las rutinas del cliente y filtrar la específica
             List<RoutineAssignment> allRoutines = clientAuthService.getClientRoutines(clientId);
+            System.out.println("Total rutinas del cliente: " + allRoutines.size());
+            
             RoutineAssignment specificRoutine = allRoutines.stream()
                     .filter(r -> r.getIdRoutineAssignment().equals(idRoutineAssignment))
                     .findFirst()
                     .orElseThrow(() -> new Exception("Rutina no encontrada o no pertenece al cliente"));
             
+            System.out.println("Rutina encontrada: " + specificRoutine.getRoutine().getName());
+            System.out.println("Cantidad de ejercicios: " + 
+                (specificRoutine.getRoutine().getExercises() != null ? 
+                    specificRoutine.getRoutine().getExercises().size() : 0));
+            
+            // Validar datos de la rutina antes de generar PDF
+            if (specificRoutine.getRoutine().getExercises() != null) {
+                for (int i = 0; i < specificRoutine.getRoutine().getExercises().size(); i++) {
+                    RoutineExercise re = specificRoutine.getRoutine().getExercises().get(i);
+                    System.out.println("Ejercicio " + (i+1) + ":");
+                    System.out.println("  - ID: " + re.getIdRoutineExercise());
+                    System.out.println("  - Exercise: " + (re.getExercise() != null ? re.getExercise().getName() : "NULL"));
+                    System.out.println("  - DayNumber: " + re.getDayNumber());
+                    System.out.println("  - CategoryOrder: " + re.getCategoryOrder());
+                    System.out.println("  - Series: " + re.getSeries());
+                    System.out.println("  - Repetitions: " + re.getRepetitions());
+                    
+                    if (re.getExercise() != null && re.getExercise().getExerciseCategory() != null) {
+                        System.out.println("  - Category: " + re.getExercise().getExerciseCategory().getName());
+                    } else {
+                        System.out.println("  - Category: NULL");
+                    }
+                }
+            }
+            
+            System.out.println("Iniciando generación de PDF...");
             // Generar PDF solo con esta rutina
             List<RoutineAssignment> singleRoutineList = java.util.Collections.singletonList(specificRoutine);
             byte[] pdfBytes = pdfGeneratorService.generateRoutinesPdf(client, singleRoutineList);
+            System.out.println("PDF generado exitosamente. Tamaño: " + pdfBytes.length + " bytes");
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
-            String filename = "rutina_" + specificRoutine.getRoutine().getName().replaceAll("\\s+", "_") + ".pdf";
+            
+            // Sanitizar el nombre del archivo para evitar caracteres problemáticos
+            String routineName = specificRoutine.getRoutine().getName();
+            if (routineName == null || routineName.trim().isEmpty()) {
+                routineName = "rutina";
+            }
+            // Eliminar caracteres especiales y reemplazar espacios
+            String safeFilename = routineName
+                .replaceAll("[^a-zA-Z0-9\\s-_]", "")
+                .replaceAll("\\s+", "_")
+                .toLowerCase();
+            String filename = "rutina_" + safeFilename + ".pdf";
+            
             headers.setContentDispositionFormData("attachment", filename);
 
+            System.out.println("=== FIN DESCARGA PDF RUTINA ===");
             return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
         } catch (Exception e) {
+            System.err.println("ERROR AL GENERAR PDF: " + e.getClass().getName());
+            System.err.println("Mensaje: " + e.getMessage());
+            e.printStackTrace();
+            
             ApiResponse<String> errorResponse = new ApiResponse<>();
             errorResponse.setMessage("Error al generar PDF: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);

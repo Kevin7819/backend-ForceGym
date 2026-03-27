@@ -88,4 +88,6 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
     int deleteClient(@Param("pIdClient") Long pIdClient, @Param("pLoggedIdUser") Long pLoggedIdUser);
 
     List<Client> findByExpirationMembershipDateBetweenAndIsDeleted(Date startDate, Date endDate, Long isDeleted);
+    
+    List<Client> findByIsDeleted(Long isDeleted);
 }

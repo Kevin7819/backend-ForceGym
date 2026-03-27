@@ -1,6 +1,7 @@
 package una.force_gym.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -380,5 +381,21 @@ public class ClientService {
         Date endDate = java.sql.Date.valueOf(endLocalDate);
         
         return clientRepo.findByExpirationMembershipDateBetweenAndIsDeleted(startDate, endDate, 0L);
+    }
+
+    public List<Client> getClientsByBirthday(int month) {
+        List<Client> allClients = clientRepo.findByIsDeleted(0L);
+        List<Client> clientsWithBirthday = new ArrayList<>();
+        
+        for (Client client : allClients) {
+            if (client.getPerson() != null && client.getPerson().getBirthday() != null) {
+                LocalDate birthday = client.getPerson().getBirthday();
+                if (birthday.getMonthValue() == month) {
+                    clientsWithBirthday.add(client);
+                }
+            }
+        }
+        
+        return clientsWithBirthday;
     }
 }

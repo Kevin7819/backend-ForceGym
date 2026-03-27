@@ -51,9 +51,14 @@ public class PdfGeneratorService {
      */
     public byte[] generateRoutinesPdf(Client client, List<RoutineAssignment> routines) throws Exception {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PdfWriter writer = new PdfWriter(baos);
-        PdfDocument pdf = new PdfDocument(writer);
-        Document document = new Document(pdf);
+        PdfWriter writer = null;
+        PdfDocument pdf = null;
+        Document document = null;
+        
+        try {
+            writer = new PdfWriter(baos);
+            pdf = new PdfDocument(writer);
+            document = new Document(pdf);
 
         // Fecha y hora actuales
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
@@ -160,10 +165,16 @@ public class PdfGeneratorService {
                     // Ordenar ejercicios dentro de cada categoría por categoryOrder y luego por id
                     for (java.util.List<RoutineExercise> exercises : exercisesByCategory.values()) {
                         exercises.sort((a, b) -> {
-                            if (!a.getCategoryOrder().equals(b.getCategoryOrder())) {
-                                return a.getCategoryOrder().compareTo(b.getCategoryOrder());
+                            Integer orderA = a.getCategoryOrder() != null ? a.getCategoryOrder() : Integer.MAX_VALUE;
+                            Integer orderB = b.getCategoryOrder() != null ? b.getCategoryOrder() : Integer.MAX_VALUE;
+                            
+                            if (!orderA.equals(orderB)) {
+                                return orderA.compareTo(orderB);
                             }
-                            return a.getIdRoutineExercise().compareTo(b.getIdRoutineExercise());
+                            
+                            Long idA = a.getIdRoutineExercise() != null ? a.getIdRoutineExercise() : 0L;
+                            Long idB = b.getIdRoutineExercise() != null ? b.getIdRoutineExercise() : 0L;
+                            return idA.compareTo(idB);
                         });
                     }
 
@@ -227,22 +238,40 @@ public class PdfGeneratorService {
 
                         // Filas de ejercicios de la categoría
                         for (RoutineExercise re : categoryEntry.getValue()) {
+                            // Validar y sanitizar el nombre del ejercicio
+                            String exerciseName = "N/A";
+                            if (re.getExercise() != null && re.getExercise().getName() != null) {
+                                exerciseName = re.getExercise().getName();
+                                // Reemplazar caracteres problemáticos si los hay
+                                exerciseName = exerciseName.replace("\u0000", "");
+                            }
+                            
+                            // Validar series y repeticiones
+                            String series = re.getSeries() != null ? re.getSeries().toString() : "N/A";
+                            String repetitions = re.getRepetitions() != null ? re.getRepetitions().toString() : "N/A";
+                            
+                            // Validar y sanitizar notas
+                            String notes = "-";
+                            if (re.getNote() != null && !re.getNote().trim().isEmpty()) {
+                                notes = re.getNote().replace("\u0000", "");
+                            }
+                            
                             table.addCell(new Cell()
-                                    .add(new Paragraph(re.getExercise() != null ? re.getExercise().getName() : "N/A").setFontSize(9))
+                                    .add(new Paragraph(exerciseName).setFontSize(9))
                                     .setBackgroundColor(new DeviceRgb(245, 245, 245))
                                     .setPadding(5));
                             table.addCell(new Cell()
-                                    .add(new Paragraph(re.getSeries() != null ? re.getSeries().toString() : "N/A").setFontSize(9))
+                                    .add(new Paragraph(series).setFontSize(9))
                                     .setBackgroundColor(new DeviceRgb(245, 245, 245))
                                     .setTextAlignment(TextAlignment.CENTER)
                                     .setPadding(5));
                             table.addCell(new Cell()
-                                    .add(new Paragraph(re.getRepetitions() != null ? re.getRepetitions().toString() : "N/A").setFontSize(9))
+                                    .add(new Paragraph(repetitions).setFontSize(9))
                                     .setBackgroundColor(new DeviceRgb(245, 245, 245))
                                     .setTextAlignment(TextAlignment.CENTER)
                                     .setPadding(5));
                             table.addCell(new Cell()
-                                    .add(new Paragraph(re.getNote() != null ? re.getNote() : "-").setFontSize(9))
+                                    .add(new Paragraph(notes).setFontSize(9))
                                     .setBackgroundColor(new DeviceRgb(245, 245, 245))
                                     .setPadding(5));
                         }
@@ -280,8 +309,25 @@ public class PdfGeneratorService {
          .setMarginRight(50);
         document.add(instructions);
 
-        document.close();
-        return baos.toByteArray();
+            document.close();
+            return baos.toByteArray();
+        } catch (NullPointerException npe) {
+            System.err.println("ERROR: NullPointerException en generación de PDF de rutinas");
+            npe.printStackTrace();
+            throw new Exception("Error: Datos faltantes en la rutina. Verifica que todos los ejercicios tengan información completa.", npe);
+        } catch (Exception e) {
+            System.err.println("ERROR: Excepción en generación de PDF de rutinas");
+            e.printStackTrace();
+            throw new Exception("Error al generar PDF de rutinas: " + e.getMessage(), e);
+        } finally {
+            if (document != null) {
+                try {
+                    document.close();
+                } catch (Exception e) {
+                    System.err.println("Error cerrando documento: " + e.getMessage());
+                }
+            }
+        }
     }
 
     /**

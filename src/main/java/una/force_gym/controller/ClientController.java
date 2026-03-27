@@ -304,4 +304,52 @@ public class ClientController {
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/birthdays")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getClientBirthdays(
+            @RequestParam int year,
+            @RequestParam int month
+    ) {
+        try {
+            List<Client> clients = clientService.getClientsByBirthday(month);
+            
+            // Agrupar clientes por día de cumpleaños
+            Map<Integer, List<Map<String, Object>>> clientsByDay = new HashMap<>();
+            
+            for (Client client : clients) {
+                if (client.getPerson() != null && client.getPerson().getBirthday() != null) {
+                    LocalDate birthday = client.getPerson().getBirthday();
+                    int day = birthday.getDayOfMonth();
+                    
+                    // Calcular edad
+                    LocalDate currentDate = LocalDate.of(year, month, day);
+                    int age = currentDate.getYear() - birthday.getYear();
+                    
+                    Map<String, Object> clientInfo = new HashMap<>();
+                    clientInfo.put("idClient", client.getIdClient());
+                    clientInfo.put("name", client.getPerson().getName() + " " + client.getPerson().getFirstLastName());
+                    clientInfo.put("phone", client.getPerson().getPhoneNumber());
+                    clientInfo.put("email", client.getPerson().getEmail());
+                    clientInfo.put("birthday", birthday.toString());
+                    clientInfo.put("clientType", client.getClientType() != null ? client.getClientType().getName() : "N/A");
+                    clientInfo.put("age", age);
+                    
+                    clientsByDay.computeIfAbsent(day, k -> new ArrayList<>()).add(clientInfo);
+                }
+            }
+            
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("clientsByDay", clientsByDay);
+            responseData.put("year", year);
+            responseData.put("month", month);
+            responseData.put("totalClients", clients.size());
+            
+            ApiResponse<Map<String, Object>> response = new ApiResponse<>("Cumpleaños obtenidos correctamente.", responseData);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+            
+        } catch (RuntimeException e) {
+            ApiResponse<Map<String, Object>> response = new ApiResponse<>("Error al obtener cumpleaños: " + e.getMessage(), null);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

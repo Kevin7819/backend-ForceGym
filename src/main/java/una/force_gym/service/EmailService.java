@@ -62,17 +62,12 @@ public class EmailService implements IEmailService {
             if (hasValidResendKey) {
                 sendEmailViaResend(toUsers, subject, htmlContent);
             } else if (mailSender != null) {
-                System.out.println("⚠️  API key de Resend no configurada, usando SMTP como fallback");
                 sendEmailViaSmtp(toUsers, subject, htmlContent);
             } else {
                 throw new RuntimeException("No hay servicio de email configurado (ni Resend ni SMTP)");
             }
 
         } catch (Exception e) {
-            System.err.println("❌ ERROR CRÍTICO enviando correo electrónico");
-            System.err.println("   Destinatarios: " + String.join(", ", toUsers));
-            System.err.println("   Asunto: " + subject);
-            e.printStackTrace();
             throw new RuntimeException("Error al enviar correo: " + e.getMessage(), e);
         }
     }
@@ -88,11 +83,6 @@ public class EmailService implements IEmailService {
     }
 
     private void sendEmailViaSmtp(String[] toUsers, String subject, String htmlContent) throws Exception {
-        System.out.println("📧 Enviando email via SMTP (Gmail)...");
-        System.out.println("   Desde: " + smtpUsername);
-        System.out.println("   Para: " + String.join(", ", toUsers));
-        System.out.println("   Asunto: " + subject);
-
         if (mailSender == null) {
             throw new RuntimeException("JavaMailSender no está configurado. Verifica las propiedades de spring.mail.*");
         }
@@ -106,15 +96,9 @@ public class EmailService implements IEmailService {
         helper.setText(htmlContent, true);
         
         mailSender.send(mimeMessage);
-        System.out.println("✅ Email enviado exitosamente via SMTP");
     }
 
     private void sendEmailViaResend(String[] toUsers, String subject, String htmlContent) throws Exception {
-        System.out.println("📧 Enviando email via Resend API...");
-        System.out.println("   Desde: " + emailSender);
-        System.out.println("   Para: " + String.join(", ", toUsers));
-        System.out.println("   Asunto: " + subject);
-
         if (resendApiKey == null || resendApiKey.isEmpty()) {
             throw new RuntimeException("RESEND_API_KEY no está configurada");
         }
@@ -140,7 +124,5 @@ public class EmailService implements IEmailService {
         if (!response.getStatusCode().is2xxSuccessful()) {
             throw new RuntimeException("Error Resend API: " + response.getBody());
         }
-
-        System.out.println("✅ Email enviado exitosamente via Resend");
     }
 }

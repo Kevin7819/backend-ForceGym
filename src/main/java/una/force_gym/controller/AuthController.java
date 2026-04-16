@@ -84,19 +84,15 @@ public class AuthController {
         @RequestBody ResetPasswordDTO request,
         HttpServletRequest httpRequest
     ) {
-        System.out.println("📝 Solicitud de cambio de contraseña recibida");
-        
         // 1. Validar token con todas las comprobaciones
         Optional<PasswordResetToken> resetToken = passwordResetService.validatePasswordResetToken(request.getToken(), httpRequest);
         if (!resetToken.isPresent()) {
-            System.err.println("❌ Token inválido o expirado");
             ApiResponse<String> response = new ApiResponse<>("El enlace de recuperación no es válido o ha expirado. Por favor, solicita un nuevo enlace.", null);
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
         
         // 2. Cambiar contraseña
         passwordResetService.resetPassword(resetToken, request.getNewPassword());
-        System.out.println("✅ Contraseña cambiada exitosamente");
         
         ApiResponse<String> response = new ApiResponse<>("Contraseña cambiada exitosamente", null);
         return new ResponseEntity<>(response, HttpStatus.OK);

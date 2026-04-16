@@ -124,22 +124,16 @@ public class ClientAuthService {
      * Obtiene las rutinas asignadas a un cliente
      */
     public List<RoutineAssignment> getClientRoutines(Long clientId) {
-        System.out.println("=== DEBUG: Searching routines for clientId: " + clientId);
         List<RoutineAssignment> allAssignments = routineAssignmentRepository.findByClient_IdClient(clientId);
-        System.out.println("=== DEBUG: Found " + allAssignments.size() + " total assignments");
         
         List<RoutineAssignment> filtered = allAssignments.stream()
             .filter(ra -> {
                 boolean hasRoutine = ra.getRoutine() != null;
                 boolean notDeleted = hasRoutine && Long.valueOf(0L).equals(ra.getRoutine().getIsDeleted());
-                System.out.println("=== DEBUG: Assignment ID " + ra.getIdRoutineAssignment() + 
-                                 ", hasRoutine=" + hasRoutine + 
-                                 ", notDeleted=" + notDeleted);
                 return hasRoutine && notDeleted;
             })
             .collect(Collectors.toList());
         
-        System.out.println("=== DEBUG: Returning " + filtered.size() + " filtered routines");
         return filtered;
     }
 

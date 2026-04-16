@@ -55,27 +55,6 @@ public class ClientController {
             @RequestParam(defaultValue = "-1") int filterByClientType
     ) {
         try {
-            System.out.println("page: " + page);
-            System.out.println("size: " + size);
-            System.out.println("searchType: " + searchType);
-            System.out.println("searchTerm: " + searchTerm);
-            System.out.println("orderBy: " + orderBy);
-            System.out.println("directionOrderBy: " + directionOrderBy);
-            System.out.println("filterByStatus: " + filterByStatus);
-
-            System.out.println("filterByDiabetes: " + filterByDiabetes);
-            System.out.println("filterByHypertension: " + filterByHypertension);
-            System.out.println("filterByMuscleInjuries: " + filterByMuscleInjuries);
-            System.out.println("filterByBoneJointIssues: " + filterByBoneJointIssues);
-            System.out.println("filterByBalanceLoss: " + filterByBalanceLoss);
-            System.out.println("filterByCardiovascularDisease: " + filterByCardiovascularDisease);
-            System.out.println("filterByBreathingIssues: " + filterByBreathingIssues);
-
-            System.out.println("filterByDateBirthStart: " + (filterByDateBirthStart != null ? filterByDateBirthStart : "null"));
-            System.out.println("filterByDateBirthEnd: " + (filterByDateBirthEnd != null ? filterByDateBirthEnd : "null"));
-
-            System.out.println("filterByClientType: " + filterByClientType);
-
             Map<String, Object> responseData = clientService.getClients(page, size, searchType, searchTerm, orderBy, directionOrderBy, filterByStatus, filterByDiabetes, filterByHypertension, filterByMuscleInjuries, filterByBoneJointIssues, filterByBalanceLoss, filterByCardiovascularDisease, filterByBreathingIssues, filterByDateBirthStart, filterByDateBirthEnd, filterByClientType);
             ApiResponse<Map<String, Object>> response = new ApiResponse<>("Clientes obtenidos correctamente.", responseData);
             return new ResponseEntity<>(response, HttpStatus.OK);

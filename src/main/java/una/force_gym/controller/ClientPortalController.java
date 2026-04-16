@@ -94,7 +94,6 @@ public class ClientPortalController {
                     String.format("Demasiados intentos fallidos. Por favor, intente nuevamente en %d minutos.", 
                     remainingTime)
                 );
-                System.out.println("🚫 Intento de login bloqueado - IP: " + clientIp);
                 return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
             }
 
@@ -102,7 +101,6 @@ public class ClientPortalController {
             
             // Login exitoso: limpiar intentos de esta IP
             loginAttemptService.loginSucceeded(clientIp);
-            System.out.println("✅ Login exitoso - IP: " + clientIp);
             
             // Generar token usando el número de cédula como identificador
             String token = userAuthenticationProvider.createToken(credentials.getIdentificationNumber());
@@ -129,8 +127,6 @@ public class ClientPortalController {
             } else {
                 errorMessage = "Demasiados intentos fallidos. Cuenta bloqueada temporalmente por 5 minutos.";
             }
-            
-            System.out.println("❌ Login fallido - IP: " + clientIp + " - Intentos restantes: " + remainingAttempts);
             
             ApiResponse<String> errorResponse = new ApiResponse<>();
             errorResponse.setMessage(errorMessage);
@@ -180,8 +176,6 @@ public class ClientPortalController {
             @RequestBody ResetPasswordDTO request,
             HttpServletRequest httpRequest) {
         try {
-            System.out.println("📝 Solicitud de cambio de contraseña de cliente recibida");
-            
             // 1. Validar token con todas las comprobaciones
             Optional<ClientPasswordResetToken> resetToken = clientPasswordResetService.validatePasswordResetToken(
                 request.getToken(), 
@@ -189,20 +183,16 @@ public class ClientPortalController {
             );
             
             if (!resetToken.isPresent()) {
-                System.err.println("❌ Token de cliente inválido o expirado");
                 ApiResponse<String> response = new ApiResponse<>("El enlace de recuperación no es válido o ha expirado. Por favor, solicita un nuevo enlace.", null);
                 return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
             }
             
             // 2. Cambiar contraseña
             clientPasswordResetService.resetPassword(resetToken, request.getNewPassword());
-            System.out.println("✅ Contraseña de cliente cambiada exitosamente");
             
             ApiResponse<String> response = new ApiResponse<>("Contraseña restablecida exitosamente", null);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("❌ Error al restablecer contraseña: " + e.getMessage());
-            e.printStackTrace();
             ApiResponse<String> errorResponse = new ApiResponse<>("Error al restablecer la contraseña: " + e.getMessage(), null);
             return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -215,17 +205,8 @@ public class ClientPortalController {
     public ResponseEntity<?> getMyRoutines(@RequestHeader("Authorization") String authHeader) {
         try {
             Long clientId = extractClientIdFromToken(authHeader);
-            System.out.println("=== DEBUG: Getting routines for clientId: " + clientId);
             
             List<RoutineAssignment> routines = clientAuthService.getClientRoutines(clientId);
-            System.out.println("=== DEBUG: Found " + routines.size() + " routines");
-            
-            // Log each routine
-            for (RoutineAssignment ra : routines) {
-                System.out.println("=== DEBUG: Routine Assignment ID: " + ra.getIdRoutineAssignment());
-                System.out.println("=== DEBUG: Routine: " + (ra.getRoutine() != null ? ra.getRoutine().getName() : "null"));
-                System.out.println("=== DEBUG: Assignment Date: " + ra.getAssignmentDate());
-            }
 
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("routines", routines);
@@ -235,13 +216,8 @@ public class ClientPortalController {
             apiResponse.setData(responseData);
             apiResponse.setMessage("Rutinas obtenidas exitosamente");
 
-            System.out.println("=== DEBUG: Response data prepared, routines count in map: " + 
-                             ((List<?>) responseData.get("routines")).size());
-
             return ResponseEntity.ok(apiResponse);
         } catch (Exception e) {
-            System.err.println("=== ERROR getting routines: " + e.getMessage());
-            e.printStackTrace();
             ApiResponse<String> errorResponse = new ApiResponse<>();
             errorResponse.setMessage("Error al obtener rutinas: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
@@ -309,55 +285,22 @@ public class ClientPortalController {
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Long idRoutineAssignment) {
         try {
-            System.out.println("=== INICIO DESCARGA PDF RUTINA ===");
-            System.out.println("ID Rutina Assignment: " + idRoutineAssignment);
-            
             Long clientId = extractClientIdFromToken(authHeader);
-            System.out.println("Client ID: " + clientId);
             
             Client client = clientRepository.findById(clientId)
                     .orElseThrow(() -> new Exception("Cliente no encontrado"));
-            System.out.println("Cliente encontrado: " + client.getPerson().getName());
             
             // Obtener todas las rutinas del cliente y filtrar la específica
             List<RoutineAssignment> allRoutines = clientAuthService.getClientRoutines(clientId);
-            System.out.println("Total rutinas del cliente: " + allRoutines.size());
             
             RoutineAssignment specificRoutine = allRoutines.stream()
                     .filter(r -> r.getIdRoutineAssignment().equals(idRoutineAssignment))
                     .findFirst()
                     .orElseThrow(() -> new Exception("Rutina no encontrada o no pertenece al cliente"));
             
-            System.out.println("Rutina encontrada: " + specificRoutine.getRoutine().getName());
-            System.out.println("Cantidad de ejercicios: " + 
-                (specificRoutine.getRoutine().getExercises() != null ? 
-                    specificRoutine.getRoutine().getExercises().size() : 0));
-            
-            // Validar datos de la rutina antes de generar PDF
-            if (specificRoutine.getRoutine().getExercises() != null) {
-                for (int i = 0; i < specificRoutine.getRoutine().getExercises().size(); i++) {
-                    RoutineExercise re = specificRoutine.getRoutine().getExercises().get(i);
-                    System.out.println("Ejercicio " + (i+1) + ":");
-                    System.out.println("  - ID: " + re.getIdRoutineExercise());
-                    System.out.println("  - Exercise: " + (re.getExercise() != null ? re.getExercise().getName() : "NULL"));
-                    System.out.println("  - DayNumber: " + re.getDayNumber());
-                    System.out.println("  - CategoryOrder: " + re.getCategoryOrder());
-                    System.out.println("  - Series: " + re.getSeries());
-                    System.out.println("  - Repetitions: " + re.getRepetitions());
-                    
-                    if (re.getExercise() != null && re.getExercise().getExerciseCategory() != null) {
-                        System.out.println("  - Category: " + re.getExercise().getExerciseCategory().getName());
-                    } else {
-                        System.out.println("  - Category: NULL");
-                    }
-                }
-            }
-            
-            System.out.println("Iniciando generación de PDF...");
             // Generar PDF solo con esta rutina
             List<RoutineAssignment> singleRoutineList = java.util.Collections.singletonList(specificRoutine);
             byte[] pdfBytes = pdfGeneratorService.generateRoutinesPdf(client, singleRoutineList);
-            System.out.println("PDF generado exitosamente. Tamaño: " + pdfBytes.length + " bytes");
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
@@ -376,13 +319,8 @@ public class ClientPortalController {
             
             headers.setContentDispositionFormData("attachment", filename);
 
-            System.out.println("=== FIN DESCARGA PDF RUTINA ===");
             return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("ERROR AL GENERAR PDF: " + e.getClass().getName());
-            System.err.println("Mensaje: " + e.getMessage());
-            e.printStackTrace();
-            
             ApiResponse<String> errorResponse = new ApiResponse<>();
             errorResponse.setMessage("Error al generar PDF: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
@@ -731,11 +669,9 @@ public class ClientPortalController {
         // Extraer el número de cédula del token
         String token = authHeader.replace("Bearer ", "");
         String identificationNumber = userAuthenticationProvider.getUsernameFromToken(token);
-        System.out.println("=== DEBUG: Extracted identification number from token: " + identificationNumber);
         
         // Buscar el cliente por número de cédula
         List<Client> allClients = clientRepository.findAll();
-        System.out.println("=== DEBUG: Total clients in DB: " + allClients.size());
         
         Client client = allClients.stream()
                 .filter(c -> {
@@ -743,18 +679,11 @@ public class ClientPortalController {
                     boolean matchesId = hasPersonAndId && c.getPerson().getIdentificationNumber().equals(identificationNumber);
                     boolean notDeleted = Long.valueOf(0L).equals(c.getIsDeleted());
                     
-                    if (matchesId) {
-                        System.out.println("=== DEBUG: Found matching client: ID=" + c.getIdClient() + 
-                                         ", Name=" + c.getPerson().getName() + 
-                                         ", Deleted=" + c.getIsDeleted());
-                    }
-                    
                     return hasPersonAndId && matchesId && notDeleted;
                 })
                 .findFirst()
                 .orElseThrow(() -> new Exception("Cliente no encontrado"));
         
-        System.out.println("=== DEBUG: Returning clientId: " + client.getIdClient());
         return client.getIdClient();
     }
 }

@@ -48,7 +48,6 @@ public class LoginAttemptService {
 
         if (attempts >= MAX_ATTEMPTS) {
             blockedCache.put(ip, System.currentTimeMillis());
-            System.out.println("🚫 IP bloqueada por exceder intentos: " + ip);
         }
     }
 

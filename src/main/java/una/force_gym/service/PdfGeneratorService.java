@@ -312,19 +312,15 @@ public class PdfGeneratorService {
             document.close();
             return baos.toByteArray();
         } catch (NullPointerException npe) {
-            System.err.println("ERROR: NullPointerException en generación de PDF de rutinas");
-            npe.printStackTrace();
             throw new Exception("Error: Datos faltantes en la rutina. Verifica que todos los ejercicios tengan información completa.", npe);
         } catch (Exception e) {
-            System.err.println("ERROR: Excepción en generación de PDF de rutinas");
-            e.printStackTrace();
             throw new Exception("Error al generar PDF de rutinas: " + e.getMessage(), e);
         } finally {
             if (document != null) {
                 try {
                     document.close();
                 } catch (Exception e) {
-                    System.err.println("Error cerrando documento: " + e.getMessage());
+                    // Error cerrando documento
                 }
             }
         }

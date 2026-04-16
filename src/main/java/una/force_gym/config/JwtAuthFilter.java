@@ -32,9 +32,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         
         // Permitir acceso sin token a rutas públicas
         String path = httpServletRequest.getRequestURI();
-        String method = httpServletRequest.getMethod();
-        
-        logger.info("🔍 Request: " + method + " " + path);
         
         if (path.equals("/login") || 
             path.equals("/recoveryPassword") || 
@@ -51,18 +48,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7); 
-    
-            logger.info("Header recibido: " + header);
-            logger.info("Token recibido: " + token);
 
             try {
                 Authentication auth = userAuthenticationProvider.validateToken(token);
-                logger.info("Token válido para usuario: " + auth.getName());
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (TokenExpiredException e) {
-                logger.warn("Token expirado");
+                // Token expirado, no hacer nada
             } catch (Exception e) {
-                logger.error("Error validando token: ", e);
+                // Error validando token
             }
         }
 

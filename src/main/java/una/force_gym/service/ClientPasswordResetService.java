@@ -134,11 +134,7 @@ public class ClientPasswordResetService {
         // 4. Verificar fingerprint del cliente (WARNING: no bloquea, solo advierte)
         String currentFingerprint = generateClientFingerprint(request);
         if (!resetToken.get().getClientFingerprint().equals(currentFingerprint)) {
-            System.out.println("⚠️  ADVERTENCIA: Fingerprint diferente detectado (cliente)");
-            System.out.println("   Esperado: " + resetToken.get().getClientFingerprint());
-            System.out.println("   Recibido: " + currentFingerprint);
-            System.out.println("   Esto puede ocurrir si el usuario abrió el email desde otro dispositivo");
-            System.out.println("   ✅ Permitiendo el cambio de contraseña de todos modos");
+            // Fingerprint diferente - permitir de todos modos
             // NO retornamos empty - permitimos continuar
         }
         
@@ -149,13 +145,10 @@ public class ClientPasswordResetService {
             resetToken.get().getSalt()
         );
         if (!resetToken.get().getVerificationHash().equals(currentVerificationHash)) {
-            System.out.println("⚠️  ADVERTENCIA: Hash de verificación diferente (cliente)");
-            System.out.println("   Esto es normal si el dispositivo/navegador es diferente");
-            System.out.println("   ✅ Permitiendo el cambio de contraseña de todos modos");
+            // Hash diferente - permitir de todos modos
             // NO retornamos empty - permitimos continuar
         }
         
-        System.out.println("✅ Token de cliente validado correctamente para: " + resetToken.get().getClient().getPerson().getEmail());
         return resetToken;
     }
     

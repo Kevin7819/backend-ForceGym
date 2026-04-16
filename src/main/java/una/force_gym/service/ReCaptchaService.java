@@ -48,7 +48,6 @@ public class ReCaptchaService {
             // Verificar si fue exitoso
             return result.toString().contains("\"success\": true");
         } catch (Exception e) {
-            e.printStackTrace();
             return false;
         }
     }

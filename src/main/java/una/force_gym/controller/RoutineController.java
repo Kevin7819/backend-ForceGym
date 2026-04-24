@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import una.force_gym.domain.Client;
 import una.force_gym.domain.Routine;
 import una.force_gym.domain.RoutineAssignment;
+import una.force_gym.dto.ClientAssignmentRequest;
 import una.force_gym.dto.RoutineWithExercisesDTO;
 import una.force_gym.repository.RoutineAssignmentRepository;
 import una.force_gym.repository.RoutineRepository;
@@ -207,6 +208,58 @@ public class RoutineController {
             ApiResponse<String> errorResponse = new ApiResponse<>();
             errorResponse.setMessage("Error al generar PDF: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para asignar clientes a una rutina existente sin modificar ejercicios
+     * POST /routine/{id}/assign-clients
+     * Body: { "clientIds": [1, 2, 3], "paramLoggedIdUser": 1 }
+     */
+    @PostMapping("/{id}/assign-clients")
+    public ResponseEntity<ApiResponse<RoutineWithExercisesDTO>> assignClientsToRoutine(
+            @PathVariable Long id,
+            @RequestBody ClientAssignmentRequest request) {
+        try {
+            request.setIdRoutine(id); // Asegurar que el ID de la ruta se usa
+            RoutineWithExercisesDTO updatedRoutine = routineService.assignClientsToRoutine(
+                    request.getIdRoutine(),
+                    request.getClientIds()
+            );
+            
+            ApiResponse<RoutineWithExercisesDTO> response = new ApiResponse<>(
+                    "Clientes asignados correctamente a la rutina.",
+                    updatedRoutine
+            );
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            ApiResponse<RoutineWithExercisesDTO> response = new ApiResponse<>(
+                    "Error al asignar clientes: " + e.getMessage(),
+                    null
+            );
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Endpoint para obtener los IDs de clientes asignados a una rutina
+     * GET /routine/{id}/assigned-clients
+     */
+    @GetMapping("/{id}/assigned-clients")
+    public ResponseEntity<ApiResponse<List<Long>>> getAssignedClients(@PathVariable Long id) {
+        try {
+            List<Long> clientIds = routineService.getAssignedClientIds(id);
+            ApiResponse<List<Long>> response = new ApiResponse<>(
+                    "Clientes asignados obtenidos correctamente.",
+                    clientIds
+            );
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            ApiResponse<List<Long>> response = new ApiResponse<>(
+                    "Error al obtener clientes asignados: " + e.getMessage(),
+                    null
+            );
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
     }
 }

@@ -1,8 +1,12 @@
 package una.force_gym.service;
 
 import java.sql.Timestamp;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -112,15 +116,80 @@ public class RoutineService {
     }
 
     private void updateRoutineRelations(Routine routine, RoutineWithExercisesDTO dto) {
-        // Eliminar y recrear ejercicios
-        routineExerciseRepository.deleteByRoutineId(routine.getIdRoutine());
-        saveRoutineExercises(routine, dto.getExercises());
+        // ACTUALIZACIÓN INTELIGENTE DE EJERCICIOS
+        // En lugar de eliminar todos y recrear, actualizamos los existentes para preservar los IDs
+        // Esto mantiene las notas personales de los clientes vinculadas a idRoutineExercise
+        
+        // Obtener ejercicios actuales de la rutina
+        List<RoutineExercise> existingExercises = routineExerciseRepository.findByRoutine_IdRoutine(routine.getIdRoutine());
+        
+        // Crear un mapa para búsqueda rápida de ejercicios existentes
+        // Clave: idExercise_dayNumber_categoryOrder (identifica un ejercicio único)
+        Map<String, RoutineExercise> existingExercisesMap = existingExercises.stream()
+                .collect(Collectors.toMap(
+                    ex -> ex.getExercise().getIdExercise() + "_" + 
+                          (ex.getDayNumber() != null ? ex.getDayNumber() : 1) + "_" + 
+                          ex.getCategoryOrder(),
+                    ex -> ex
+                ));
 
-        // Eliminar y recrear asignaciones
-        routineAssignmentRepository.deleteByRoutineId(routine.getIdRoutine());
+        // Lista de ejercicios que se deben mantener (actualizar o crear)
+        Set<String> exercisesToKeep = new HashSet<>();
+
+        // Procesar ejercicios del DTO
+        for (RoutineExerciseDTO exDto : dto.getExercises()) {
+            validateExerciseDTO(exDto);
+            
+            String key = exDto.getIdExercise() + "_" + 
+                        (exDto.getDayNumber() != null ? exDto.getDayNumber() : 1) + "_" + 
+                        exDto.getCategoryOrder();
+            
+            exercisesToKeep.add(key);
+
+            RoutineExercise existingExercise = existingExercisesMap.get(key);
+
+            if (existingExercise != null) {
+                // ACTUALIZAR ejercicio existente (preserva el idRoutineExercise y las notas)
+                existingExercise.setSeries(exDto.getSeries());
+                existingExercise.setRepetitions(exDto.getRepetitions());
+                existingExercise.setNote(exDto.getNote());
+                existingExercise.setCategoryOrder(exDto.getCategoryOrder());
+                existingExercise.setDayNumber(exDto.getDayNumber() != null ? exDto.getDayNumber() : 1);
+                routineExerciseRepository.save(existingExercise);
+            } else {
+                // CREAR nuevo ejercicio
+                RoutineExercise newExercise = new RoutineExercise();
+                newExercise.setRoutine(routine);
+                
+                Exercise exercise = exerciseRepository.findById(exDto.getIdExercise())
+                        .orElseThrow(() -> new RuntimeException("Ejercicio no encontrado con ID: " + exDto.getIdExercise()));
+                newExercise.setExercise(exercise);
+                
+                newExercise.setSeries(exDto.getSeries());
+                newExercise.setRepetitions(exDto.getRepetitions());
+                newExercise.setNote(exDto.getNote());
+                newExercise.setCategoryOrder(exDto.getCategoryOrder());
+                newExercise.setDayNumber(exDto.getDayNumber() != null ? exDto.getDayNumber() : 1);
+                
+                routineExerciseRepository.save(newExercise);
+            }
+        }
+
+        // ELIMINAR solo los ejercicios que ya no están en el DTO
+        for (Map.Entry<String, RoutineExercise> entry : existingExercisesMap.entrySet()) {
+            if (!exercisesToKeep.contains(entry.getKey())) {
+                routineExerciseRepository.delete(entry.getValue());
+            }
+        }
+
+        // Solo actualizar asignaciones si se proporcionaron en el DTO
+        // Si assignments es null o está vacío desde el frontend, no tocar las asignaciones existentes
+        // Esto permite que el frontend use el endpoint específico /assign-clients
         if (dto.getAssignments() != null && !dto.getAssignments().isEmpty()) {
+            routineAssignmentRepository.deleteByRoutineId(routine.getIdRoutine());
             saveRoutineAssignments(routine, dto.getAssignments());
         }
+        // Si assignments es vacío, las asignaciones existentes se mantienen intactas
     }
 
     @Transactional(readOnly = true)
@@ -236,7 +305,7 @@ public class RoutineService {
                     assignment.setClient(clientRepository.findById(assignmentDto.getIdClient())
                             .orElseThrow(() -> new RuntimeException("Cliente no encontrado con ID: " + assignmentDto.getIdClient())));
                     assignment.setAssignmentDate(assignmentDto.getAssignmentDate() != null
-                            ? assignmentDto.getAssignmentDate() : new Date());
+                            ? assignmentDto.getAssignmentDate() : getTodayLocalDate()); // Usar fecha local
 
                     return assignment;
                 })
@@ -314,5 +383,92 @@ public class RoutineService {
         dto.setAssignments(assignmentDTOs);
 
         return dto;
+    }
+
+    /**
+     * Asignar clientes a una rutina existente sin modificar los ejercicios
+     * Preserva las notas personales de los clientes ya asignados
+     */
+    @Transactional
+    public RoutineWithExercisesDTO assignClientsToRoutine(Long routineId, List<Long> clientIds) {
+        // Validar que la rutina existe
+        Routine routine = routineRepository.findById(routineId)
+                .orElseThrow(() -> new RuntimeException("Rutina no encontrada con ID: " + routineId));
+
+        if (routine.getIsDeleted() == 1) {
+            throw new RuntimeException("No se puede asignar clientes a una rutina eliminada");
+        }
+
+        // Validar que hay clientes para asignar
+        if (clientIds == null || clientIds.isEmpty()) {
+            throw new RuntimeException("Debe proporcionar al menos un cliente para asignar");
+        }
+
+        // Obtener asignaciones actuales
+        List<RoutineAssignment> currentAssignments = routineAssignmentRepository.findByRoutine_IdRoutine(routineId);
+        List<Long> currentClientIds = currentAssignments.stream()
+                .map(assignment -> assignment.getClient().getIdClient())
+                .collect(Collectors.toList());
+
+        // Determinar qué clientes agregar y cuáles remover
+        List<Long> clientsToAdd = clientIds.stream()
+                .filter(clientId -> !currentClientIds.contains(clientId))
+                .collect(Collectors.toList());
+
+        List<Long> clientsToRemove = currentClientIds.stream()
+                .filter(clientId -> !clientIds.contains(clientId))
+                .collect(Collectors.toList());
+
+        // Agregar nuevos clientes
+        for (Long clientId : clientsToAdd) {
+            if (!clientRepository.existsById(clientId)) {
+                throw new RuntimeException("Cliente no encontrado con ID: " + clientId);
+            }
+
+            RoutineAssignment newAssignment = new RoutineAssignment();
+            newAssignment.setRoutine(routine);
+            newAssignment.setClient(clientRepository.findById(clientId).orElseThrow());
+            newAssignment.setAssignmentDate(getTodayLocalDate()); // Fecha local sin hora
+            routineAssignmentRepository.save(newAssignment);
+        }
+
+        // Remover clientes que ya no están en la lista
+        for (Long clientId : clientsToRemove) {
+            currentAssignments.stream()
+                    .filter(assignment -> assignment.getClient().getIdClient().equals(clientId))
+                    .findFirst()
+                    .ifPresent(routineAssignmentRepository::delete);
+        }
+
+        // Retornar la rutina actualizada con todas sus asignaciones
+        return mapRoutineToDTO(routine);
+    }
+
+    /**
+     * Obtener lista de clientes asignados a una rutina
+     */
+    @Transactional(readOnly = true)
+    public List<Long> getAssignedClientIds(Long routineId) {
+        if (!routineRepository.existsById(routineId)) {
+            throw new RuntimeException("Rutina no encontrada con ID: " + routineId);
+        }
+
+        return routineAssignmentRepository.findByRoutine_IdRoutine(routineId)
+                .stream()
+                .map(assignment -> assignment.getClient().getIdClient())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Obtiene la fecha actual como Date con hora 00:00:00 en la zona horaria local
+     * Esto evita problemas de conversión UTC que causan cambios de día
+     */
+    private Date getTodayLocalDate() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        return calendar.getTime();
     }
 }
